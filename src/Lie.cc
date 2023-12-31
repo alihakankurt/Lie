@@ -1,7 +1,10 @@
 #include <iostream>
 
+#include <Editor.hh>
+
 auto main() -> int
 {
-    std::cout << "Hello, there!" << std::endl;
+    Lie::Editor editor;
+    editor.Start();
     return 0;
 }
