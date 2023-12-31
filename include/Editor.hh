@@ -12,10 +12,16 @@ namespace Lie
         auto Start() -> void;
 
       private:
+        bool _running;
+
         Buffer _buffer;
 
+        int _cursorX;
+        int _cursorY;
+
+        auto ProcessInput(Key key) -> void;
+
         auto Flush() -> void;
-        auto ClearScreen() -> void;
-        auto DrawRows() -> void;
+        auto RefreshScreen() -> void;
     };
 }
