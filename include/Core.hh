@@ -10,6 +10,7 @@
 #endif
 
 #include <string>
+#include <vector>
 
 namespace Lie
 {

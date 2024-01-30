@@ -18,6 +18,14 @@ namespace Lie
 
         auto Append(char c) -> void;
         auto Append(const std::string& string) -> void;
+        auto Append(Buffer& other) -> void;
+
+        auto Insert(int index, char c) -> void;
+        auto Insert(int index, const std::string& string) -> void;
+        auto Insert(int index, Buffer& other) -> void;
+
+        auto Remove(int index) -> void;
+        auto Remove(int index, int count) -> void;
 
       private:
         int _size;

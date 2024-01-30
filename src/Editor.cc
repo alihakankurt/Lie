@@ -8,6 +8,8 @@ auto Lie::Editor::Start() -> void
 
     Terminal::EnableRawMode();
 
+    InitializeScreen();
+
     while (_running)
     {
         RefreshScreen();
@@ -19,21 +21,27 @@ auto Lie::Editor::Start() -> void
     Terminal::Write("\033[2J\033[H", 7);
 }
 
+auto Lie::Editor::CurrentLine() -> Buffer&
+{
+    return _lines[_cursorY - 1];
+}
+
 auto Lie::Editor::ProcessInput(Key key) -> void
 {
     switch (key)
     {
-        case Key::Q:
-        case Key::LowerQ:
+        case Key::CtrlQ:
             _running = false;
             break;
 
         case Key::Up:
             _cursorY = std::max(_cursorY - 1, 1);
+            _cursorX = std::min(_cursorX, CurrentLine().Size() + 1);
             break;
 
         case Key::Down:
             _cursorY = std::min(_cursorY + 1, Terminal::GetWindowSize().Height - 1);
+            _cursorX = std::min(_cursorX, CurrentLine().Size() + 1);
             break;
 
         case Key::Left:
@@ -41,57 +49,68 @@ auto Lie::Editor::ProcessInput(Key key) -> void
             break;
 
         case Key::Right:
-            _cursorX = std::min(_cursorX + 1, Terminal::GetWindowSize().Width);
+            _cursorX = std::min(_cursorX + 1, CurrentLine().Size() + 1);
+            break;
+
+        case Key::Backspace:
+            if (_cursorX > 1)
+            {
+                CurrentLine().Remove(_cursorX - 2);
+                _cursorX--;
+            }
             break;
 
         default:
+            if ((key >= Key::A && key <= Key::Z)
+                || (key >= Key::LowerA && key <= Key::LowerZ)
+                || (key >= Key::Zero && key <= Key::Nine)
+                || key == Key::Space)
+            {
+                char c = static_cast<char>(key);
+                CurrentLine().Insert(_cursorX - 1, c);
+                _cursorX++;
+            }
             break;
     }
 }
 
-auto Lie::Editor::Flush() -> void
+auto Lie::Editor::InitializeScreen() -> void
 {
-    Terminal::Write(_buffer.Data(), _buffer.Size());
-    _buffer.Clear();
+    Size windowSize = Terminal::GetWindowSize();
+    _lines.resize(windowSize.Height - 1);
+
+    Terminal::Write("\033[2J\033[H", 7);
+    for (int y = 0; y < windowSize.Height - 1; y++)
+    {
+        Terminal::Write(_lines[y].Data(), _lines[y].Size());
+    }
+
+    Terminal::Write("\033[H", 3);
 }
 
 auto Lie::Editor::RefreshScreen() -> void
 {
-    // Hide cursor
-    _buffer.Append("\033[?25l");
-
-    // Clear screen
-    _buffer.Append("\033[H");
-
-    // Draw rows
-    Size size = Terminal::GetWindowSize();
-
-    for (int y = 1; y < size.Height; y++)
-    {
-        _buffer.Append("~\033[0K\r\n");
-    }
+    _buffer.Clear();
 
     std::string stringX = std::to_string(_cursorX);
     std::string stringY = std::to_string(_cursorY);
 
-    // Draw status bar
-    _buffer.Append("\033[7m");
-    _buffer.Append("Lie - ");
+    _buffer.Append("\033[?25l");
+
+    _buffer.Append("\033[");
     _buffer.Append(stringY);
-    _buffer.Append(":");
-    _buffer.Append(stringX);
-    _buffer.Append("\033[m");
+    _buffer.Append(";1H");
+
+    _buffer.Append(CurrentLine());
     _buffer.Append("\033[0K\r\n");
 
-    // Move cursor
     _buffer.Append("\033[");
     _buffer.Append(stringY);
     _buffer.Append(";");
     _buffer.Append(stringX);
     _buffer.Append("H");
 
-    // Show cursor
     _buffer.Append("\033[?25h");
 
-    Flush();
+    Terminal::Write(_buffer.Data(), _buffer.Size());
 }
