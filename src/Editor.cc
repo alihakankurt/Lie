@@ -1,116 +1,144 @@
 #include <Editor.hh>
 
-auto Lie::Editor::Start() -> void
+namespace Lie
 {
-    _running = true;
-    _cursorX = 1;
-    _cursorY = 1;
-
-    Terminal::EnableRawMode();
-
-    InitializeScreen();
-
-    while (_running)
+    auto Editor::Start() -> void
     {
-        RefreshScreen();
-        Key key = Terminal::Read();
-        ProcessInput(key);
+        Initialize();
+
+        while (_running)
+        {
+            RefreshScreen();
+            Key key = Terminal::Read();
+            ProcessInput(key);
+        }
+
+        Finalize();
     }
 
-    Terminal::DisableRawMode();
-    Terminal::Write("\033[2J\033[H", 7);
-}
-
-auto Lie::Editor::CurrentLine() -> Buffer&
-{
-    return _lines[_cursorY - 1];
-}
-
-auto Lie::Editor::ProcessInput(Key key) -> void
-{
-    switch (key)
+    auto Editor::CurrentLine() -> Buffer&
     {
-        case Key::CtrlQ:
-            _running = false;
-            break;
-
-        case Key::Up:
-            _cursorY = std::max(_cursorY - 1, 1);
-            _cursorX = std::min(_cursorX, CurrentLine().Size() + 1);
-            break;
-
-        case Key::Down:
-            _cursorY = std::min(_cursorY + 1, Terminal::GetWindowSize().Height - 1);
-            _cursorX = std::min(_cursorX, CurrentLine().Size() + 1);
-            break;
-
-        case Key::Left:
-            _cursorX = std::max(_cursorX - 1, 1);
-            break;
-
-        case Key::Right:
-            _cursorX = std::min(_cursorX + 1, CurrentLine().Size() + 1);
-            break;
-
-        case Key::Backspace:
-            if (_cursorX > 1)
-            {
-                CurrentLine().Remove(_cursorX - 2);
-                _cursorX--;
-            }
-            break;
-
-        default:
-            if ((key >= Key::A && key <= Key::Z)
-                || (key >= Key::LowerA && key <= Key::LowerZ)
-                || (key >= Key::Zero && key <= Key::Nine)
-                || key == Key::Space)
-            {
-                char c = static_cast<char>(key);
-                CurrentLine().Insert(_cursorX - 1, c);
-                _cursorX++;
-            }
-            break;
-    }
-}
-
-auto Lie::Editor::InitializeScreen() -> void
-{
-    Size windowSize = Terminal::GetWindowSize();
-    _lines.resize(windowSize.Height - 1);
-
-    Terminal::Write("\033[2J\033[H", 7);
-    for (int y = 0; y < windowSize.Height - 1; y++)
-    {
-        Terminal::Write(_lines[y].Data(), _lines[y].Size());
+        return _lines[_scrollY + _cursorY - 1];
     }
 
-    Terminal::Write("\033[H", 3);
-}
+    auto Editor::Initialize() -> void
+    {
+        _running = true;
 
-auto Lie::Editor::RefreshScreen() -> void
-{
-    _buffer.Clear();
+        _cursorX = 1;
+        _cursorY = 1;
 
-    std::string stringX = std::to_string(_cursorX);
-    std::string stringY = std::to_string(_cursorY);
+        _scrollX = 0;
+        _scrollY = 0;
 
-    _buffer.Append("\033[?25l");
+        Terminal::EnableRawMode();
 
-    _buffer.Append("\033[");
-    _buffer.Append(stringY);
-    _buffer.Append(";1H");
+        Terminal::ClearScreen();
+        Terminal::MoveCursor(1, 1);
+        Terminal::Flush();
 
-    _buffer.Append(CurrentLine());
-    _buffer.Append("\033[0K\r\n");
+        Size windowSize = Terminal::GetWindowSize();
+        _lines.resize(windowSize.Height - 1);
+    }
 
-    _buffer.Append("\033[");
-    _buffer.Append(stringY);
-    _buffer.Append(";");
-    _buffer.Append(stringX);
-    _buffer.Append("H");
+    auto Editor::Finalize() -> void
+    {
+        Terminal::ClearScreen();
+        Terminal::MoveCursor(1, 1);
+        Terminal::Flush();
+        Terminal::DisableRawMode();
+    }
 
-    _buffer.Append("\033[?25h");
+    auto Editor::ProcessInput(Key key) -> void
+    {
+        switch (key)
+        {
+            case Key::CtrlQ:
+                _running = false;
+                break;
 
-    Terminal::Write(_buffer.Data(), _buffer.Size());
+            case Key::Up:
+            case Key::Down:
+            case Key::Left:
+            case Key::Right:
+                MoveCursor(key);
+                break;
+
+            case Key::Backspace:
+                if (_cursorX > 1)
+                {
+                    CurrentLine().Remove(_cursorX - 2);
+                    _cursorX--;
+                }
+                break;
+
+            default:
+                if ((key >= Key::A && key <= Key::Z) || (key >= Key::LowerA && key <= Key::LowerZ) || (key >= Key::Zero && key <= Key::Nine) ||
+                    key == Key::Space)
+                {
+                    char c = static_cast<char>(key);
+                    CurrentLine().Insert(_cursorX - 1, c);
+                    _cursorX++;
+                }
+                break;
+        }
+    }
+
+    auto Editor::MoveCursor(Key key) -> void
+    {
+        Size windowSize = Terminal::GetWindowSize();
+        switch (key)
+        {
+            case Key::Up:
+                if (_cursorY > 1)
+                    _cursorY--;
+                else if (_scrollY > 0)
+                    _scrollY--;
+                _cursorX = std::min(_cursorX, CurrentLine().Size() - _scrollX + 1);
+                break;
+
+            case Key::Down:
+                if (_cursorY < windowSize.Height - 1)
+                    _cursorY++;
+                else if (_scrollY < static_cast<int>(_lines.size()) - windowSize.Height + 1)
+                    _scrollY++;
+                _cursorX = std::min(_cursorX, CurrentLine().Size() - _scrollX + 1);
+                break;
+
+            case Key::Left:
+                if (_cursorX > 1)
+                    _cursorX = std::min(_cursorX - 1, CurrentLine().Size() - _scrollX + 1);
+                else if (_scrollX > 0)
+                    _scrollX--;
+                break;
+
+            case Key::Right:
+                if (_cursorX < CurrentLine().Size() + 1 - _scrollX)
+                    _cursorX = std::min(_cursorX + 1, CurrentLine().Size() - _scrollX + 1);
+                else if (_scrollX < CurrentLine().Size() - windowSize.Width)
+                    _scrollX++;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    // TODO: This function can be abstracted.
+    // FIXME: The screen should move completely when scrolling.
+    auto Editor::RefreshScreen() -> void
+    {
+        Terminal::HideCursor();
+
+        Terminal::MoveCursor(1, _cursorY);
+
+        Terminal::Write(CurrentLine().Data() + _scrollX, CurrentLine().Size() - _scrollX);
+
+        Terminal::ClearLine();
+
+        Terminal::MoveCursor(_cursorX, _cursorY);
+        Terminal::ShowCursor();
+
+        Terminal::Flush();
+    }
 }

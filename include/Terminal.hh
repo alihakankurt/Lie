@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core.hh>
+#include <Buffer.hh>
 
 #if defined(LIE_UNIX)
 #    include <unistd.h>
@@ -168,9 +169,18 @@ namespace Lie
         [[nodiscard]] static auto GetWindowSize() -> Size;
 
         [[nodiscard]] static auto Read() -> Key;
-        static auto Write(const void* data, int size) -> bool;
+        static auto Write(const char* data, int size) -> void;
+        static auto Flush() -> bool;
+
+        static auto ClearScreen() -> void;
+        static auto ClearLine() -> void;
+        static auto MoveCursor(int x, int y) -> void;
+        static auto HideCursor() -> void;
+        static auto ShowCursor() -> void;
 
       private:
+        static Buffer buffer;
+
 #if defined(LIE_UNIX)
         static termios original;
 #endif

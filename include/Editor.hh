@@ -14,17 +14,22 @@ namespace Lie
       private:
         bool _running;
 
-        Buffer _buffer;
-        std::vector<Buffer> _lines;
-
         int _cursorX;
         int _cursorY;
 
+        int _scrollX;
+        int _scrollY;
+
+        std::vector<Buffer> _lines;
+
         auto CurrentLine() -> Buffer&;
 
-        auto ProcessInput(Key key) -> void;
+        auto Initialize() -> void;
+        auto Finalize() -> void;
 
-        auto InitializeScreen() -> void;
+        auto ProcessInput(Key key) -> void;
+        auto MoveCursor(Key key) -> void;
+
         auto RefreshScreen() -> void;
     };
 }

@@ -17,10 +17,12 @@ namespace Lie
         auto Clear() -> void;
 
         auto Append(char c) -> void;
+        auto Append(const char* data, int size) -> void;
         auto Append(const std::string& string) -> void;
         auto Append(Buffer& other) -> void;
 
         auto Insert(int index, char c) -> void;
+        auto Insert(int index, const char* data, int size) -> void;
         auto Insert(int index, const std::string& string) -> void;
         auto Insert(int index, Buffer& other) -> void;
 
