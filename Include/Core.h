@@ -1,14 +1,14 @@
-#ifndef __CORE_H__
-#define __CORE_H__
+#ifndef __LIE_CORE_H__
+#define __LIE_CORE_H__
 
 #if defined(_WIN32) || defined(_WIN64)
-#    define LIE_PLATFORM_WINDOWS
+#define LIE_PLATFORM_WINDOWS
 #elif defined(__linux__)
-#    define LIE_PLATFORM_LINUX
+#define LIE_PLATFORM_LINUX
 #elif defined(__APPLE__)
-#    define LIE_PLATFORM_MACOS
+#define LIE_PLATFORM_MACOS
 #else
-#    error "Unsupported platform"
+#error "Unsupported platform"
 #endif
 
 #include <stddef.h>
@@ -28,5 +28,9 @@ typedef ptrdiff_t isize;
 
 typedef float f32;
 typedef double f64;
+
+typedef u8 bool;
+#define true  1
+#define false 0
 
 #endif

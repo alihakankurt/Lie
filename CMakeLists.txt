@@ -90,6 +90,7 @@ target_precompile_headers(Includes INTERFACE Include/Core.h)
 ## -------------------------- ##
 set(Sources
     Source/Lie.c
+    Source/Terminal/Unix.c
 )
 
 add_executable(${PROJECT_NAME} ${Sources})
