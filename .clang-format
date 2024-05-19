@@ -1,0 +1,323 @@
+---
+## C++, latest standard.
+Language: Cpp
+Standard: Latest
+
+## The extra indent or outdent of access modifiers (`public`, `protected`, `private`)
+AccessModifierOffset: -2
+
+## If a function declaration or call doesn't fit on a line,
+## format the arguments/parameters like this:
+##
+##    int funky(
+##        int arg0,
+##        int arg1,
+##        int arg2
+##    );
+AlignAfterOpenBracket: BlockIndent
+
+## Don't align arrays or initializer lists.
+AlignArrayOfStructures: None
+
+## Don't align consecutive assignments.
+AlignConsecutiveAssignments: None
+
+## Bit fields should be aligned to the colon.
+AlignConsecutiveBitFields: Consecutive
+
+## Don't align consecutive declarations.
+AlignConsecutiveDeclarations: None
+
+## Consecutive macros can be aligned too.
+AlignConsecutiveMacros: Consecutive
+
+## Align consecutive `case` labels that contains single line returns.
+AlignConsecutiveShortCaseStatements:
+    Enabled: true
+    AcrossEmptyLine: true
+    AcrossComments: true
+    AlignCaseColons: false
+
+## Personally don't use it but it's good to have.
+AlignEscapedNewlines: Left
+
+## Align operands on the newline like this:
+##    int a = 1 + 2 + 3
+##            + 4 + 5;
+AlignOperands: AlignAfterOperator
+
+## Don't align trailing comments.
+AlignTrailingComments: false
+
+## Don't allow parameters to be put on the next line.
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+## Don't allow break before noexcept keyword.
+AllowBreakBeforeNoexceptSpecifier: Never
+
+## Align these declarations like this cause otherwise it's ugly.
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: false
+
+## Don't do this horrible thing that comes decades ago, NEVER EVER.
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+
+## Break before multiline strings cause it's easier to read.
+AlwaysBreakBeforeMultilineStrings: true
+
+## Always break template declarations.
+AlwaysBreakTemplateDeclarations: Yes
+
+## Identifiers that should be interpreted as attributes.
+AttributeMacros: []
+
+## Function arguments/parameters are either all on the same line or one per line.
+BinPackArguments: false
+BinPackParameters: false
+
+## Put spaces before and after the colon of bitfields.
+BitFieldColonSpacing: Both
+
+## Brace wrapping style.
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterCaseLabel: true
+    AfterClass: true
+    AfterControlStatement: Always
+    AfterEnum: true
+    AfterFunction: true
+    AfterNamespace: true
+    AfterStruct: true
+    AfterUnion: true
+    AfterExternBlock: true
+    BeforeCatch: true
+    BeforeElse: true
+    BeforeLambdaBody: true
+    BeforeWhile: true
+    IndentBraces: false
+    SplitEmptyFunction: true
+    SplitEmptyRecord: true
+    SplitEmptyNamespace: true
+
+## The indentation in content of the braced initializer.
+## If unset, the `ContinuationIndentWidth` is used.
+## BracedInitializerIndentWidth: 4
+
+## Don't break adjacent string literals into multiple lines.
+BreakAdjacentStringLiterals: false
+
+## Break after the attributes in a declaration.
+BreakAfterAttributes: Always
+
+## Break before binary operators except assignment operators.
+BreakBeforeBinaryOperators: NonAssignment
+
+## Always break before concept declarations.
+BreakBeforeConceptDeclarations: Always
+
+## Break before the colons in ASM statements.
+# BreakBeforeInlineASMColon: OnlyMultiLine
+
+## Break before ? and : in ternary expressions.
+BreakBeforeTernaryOperators: true
+
+## Break after colon of constructor initializer if it doesn't fit on a line.
+BreakConstructorInitializers: AfterColon
+
+## Break after colon of inheritance if it doesn't fit on a line.
+BreakInheritanceList: AfterColon
+
+## Don't allow to break string literals. I'll break it myself if needed.
+BreakStringLiterals: false
+
+## Column limit is 0 to disable ugly line wrapping.
+ColumnLimit: 0
+
+## A regular expression that describes comments with special meaning.
+## These comments can't be break into multiple lines.
+CommentPragmas: '^(TODO|FIXME|BUG):?'
+
+## Don't allow namespace declarations to be put on the next line.
+## Instead declare them with a scope resolution operator (::).
+CompactNamespaces: false
+
+## The number of columns to use for indentation of constructor initializers.
+ConstructorInitializerIndentWidth: 4
+
+## The number of columns to use for indentation of continuation lines.
+ContinuationIndentWidth: 4
+
+## Don't put spaces around the braced lists.
+Cpp11BracedListStyle: true
+
+## Don't align pointers and references by most common alignment in the file.
+DerivePointerAlignment: false
+
+## Disables formatting completely and we don't want that to happen. :)
+DisableFormat: false
+
+## Don't put a newline after the access modifiers.
+EmptyLineAfterAccessModifier: Never
+
+## As opposed to the previous option, put a newline before the access modifiers to make it more readable.
+EmptyLineBeforeAccessModifier: Always
+
+## Personally I don't like to put comments at the end of namespace declarations.
+FixNamespaceComments: false
+
+## Identifiers that should be interpreted just like `for` keyword.
+ForEachMacros: []
+
+## Identifiers that should be interpreted just like `if` keyword.
+IfMacros: []
+
+## Sort and split into groups the `#include` blocks.
+IncludeBlocks: Regroup
+
+## Indent the access modifiers by `AccessModifierOffset`.
+## Somehow this cause double indenting so I disabled it.
+## IndentAccessModifiers: false
+
+## Don't indent the braces of `case` blocks.
+IndentCaseBlocks: false
+
+## Indent the `case` and labels.
+IndentCaseLabels: true
+
+## Indent the content of the `extern` blocks.
+IndentExternBlock: AfterExternBlock
+
+## Outdent the `goto` labels.
+IndentGotoLabels: true
+
+## Don't indent the pre-processor directives.
+IndentPPDirectives: None
+
+## Don't indent the `requires` clause cause it's looks bad when reading.
+IndentRequiresClause: false
+
+## The number of columns to use for indentation.
+IndentWidth: 4
+
+## Indent function declaration if it somehow doesn't fit on a line.
+IndentWrappedFunctionNames: true
+
+## Do not insert anything to the file.
+InsertBraces: false
+InsertNewlineAtEOF: false
+InsertTrailingCommas: None
+
+## Put integer literal seperators to make it more readable.
+IntegerLiteralSeparator:
+    Binary: 4
+    Decimal: 3
+    Hex: 4
+
+## Don't keep more then 1 empty line at the end of the file.
+KeepEmptyLinesAtEOF: false
+
+## Don't put empty line at the start of a block.
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+## Indent lambda body relative to the outer scope.
+LambdaBodyIndentation: OuterScope
+
+## Use LF for the line ending character.
+LineEnding: LF
+
+## Don't allow unnecessary empty lines.
+MaxEmptyLinesToKeep: 1
+
+## Always indent the namespace blocks.
+NamespaceIndentation: All
+
+## Identifiers that should be interpreted as namespaces.
+NamespaceMacros: []
+
+## The indent width of the pre-processor directives.
+## If set to -1, the `IndentWidth` is used.
+PPIndentWidth: -1
+
+## Put all constructor initializers on the current line if they fit.
+## Otherwise, put each one on its own line.
+PackConstructorInitializers: CurrentLine
+
+## Align pointer and reference to the left.
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+## Put qualifiers on the left of the type by this order.
+QualifierAlignment: Left
+QualifierOrder: ['friend', 'static', 'inline', 'constepxr', 'const', 'restrict', 'volatile', 'type']
+
+## Reflow the comments to make it more readable.
+ReflowComments: true
+
+## Put the `requires` clause on it's own line.
+RequiresClausePosition: OwnLine
+
+## Indent the `requires` expression relative to the outer scope.
+RequiresExpressionIndentation: OuterScope
+
+## Put an empty line in each definition for readability.
+SeperateDefinitionBlocks: Always
+
+## Don't change order of `#include` blocks and `using` statements.
+SortIncludes: Never
+SortUsingDeclarations: Never
+
+## Spaceing.
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+    AfterControlStatement: true
+    AfterForeachMacros: true
+    AfterFunctionDeclarationName: false
+    AfterFunctionDefinitionName: false
+    AfterIfMacros: true
+    AfterOverloadedOperator: false
+    AfterPlacementOperator: true
+    AfterRequiresInClause: true
+    AfterRequiresInExpression: true
+    BeforeNonEmptyParentheses: false
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+SpacesInLineCommentPrefix:
+    Minimum: 1
+    Maximum: 1
+SpacesInParens: Never
+SpacesInSquareBrackets: false
+
+## The number of spaces to insert for tab.
+TabWidth: 4
+
+## The non-keyword identifiers that should be interpreted as types.
+TypeNames: []
+
+## Don't use tabs. NEVER EVER.
+UseTab: Never
+
+## Macros that are sensitive to whitespaces.
+WhitespaceSensitiveMacros: []
+
+...
