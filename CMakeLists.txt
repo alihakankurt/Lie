@@ -90,6 +90,7 @@ target_precompile_headers(Includes INTERFACE Include/Core.h)
 ## -------------------------- ##
 set(Sources
     Source/Lie.c
+    Source/Command.c
     Source/Terminal/Unix.c
 )
 

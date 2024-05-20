@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
+#include <string.h>
 
 struct termios original;
 u8 buffer[8];
@@ -469,6 +470,34 @@ bool PollEvent(Event* event)
         event->Key.Modifiers |= ShiftModifier;
 
     return true;
+}
+
+void ProcessCommandQueue(CommandQueue* queue)
+{
+    if (queue->Count == 0)
+        return;
+
+    for (Command* command = queue->Items; command < queue->Items + queue->Count; ++command)
+    {
+        switch (command->Kind)
+        {
+            case PrintCommand:
+                write(STDOUT_FILENO, command->Print.Data, command->Print.Length);
+                break;
+            case MoveCursorCommand:
+                sprintf((char*)buffer, "\x1B[%hu;%huH", command->MoveCursor.Y, command->MoveCursor.X);
+                write(STDOUT_FILENO, buffer, strlen((char*)buffer));
+                break;
+            case ClearScreenCommand:
+                sprintf((char*)buffer, "\x1B[%huJ", command->ClearScreen.Value);
+                write(STDOUT_FILENO, buffer, strlen((char*)buffer));
+                break;
+            case ClearLineCommand:
+                sprintf((char*)buffer, "\x1B[%huK", command->ClearLine.Value);
+                write(STDOUT_FILENO, buffer, strlen((char*)buffer));
+                break;
+        }
+    }
 }
 
 #endif
