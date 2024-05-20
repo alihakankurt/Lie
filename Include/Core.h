@@ -33,4 +33,19 @@ typedef u8 bool;
 #define true  1
 #define false 0
 
+static bool IsDigit(u8 c)
+{
+    return '0' <= c && c <= '9';
+}
+
+static bool IsUppercase(u8 c)
+{
+    return 'A' <= c && c <= 'Z';
+}
+
+static bool IsLowercase(u8 c)
+{
+    return 'a' <= c && c <= 'z';
+}
+
 #endif

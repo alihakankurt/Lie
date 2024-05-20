@@ -35,19 +35,17 @@ typedef enum KeyModifier
     CtrlModifier = 4,
 } KeyModifier;
 
-typedef struct KeyEventData
-{
-    KeyCode Code;
-    u8 Value;
-    KeyModifier Modifiers;
-} KeyEventData;
-
 typedef struct Event
 {
     EventKind Kind;
     union
     {
-        KeyEventData Key;
+        struct KeyEventData
+        {
+            KeyCode Code;
+            u8 Value;
+            KeyModifier Modifiers;
+        } Key;
     };
 } Event;
 

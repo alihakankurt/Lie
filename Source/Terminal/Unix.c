@@ -50,33 +50,34 @@ KeyModifier GetKeyModifiers(u8 value)
     return modifiers;
 }
 
+bool ReadKeyModifiers(Event* event, usize index)
+{
+    if (!ReadInto(index) || !IsDigit(buffer[index]))
+        return false;
+
+    u8 value = buffer[index] - '0';
+    if (!ReadInto(index))
+        return false;
+
+    if (IsDigit(buffer[index]))
+    {
+        value = value * 10 + buffer[index] - '0';
+
+        if (!ReadInto(index))
+            return false;
+    }
+
+    event->Key.Modifiers = GetKeyModifiers(value);
+    return true;
+}
+
 bool HandleSS3Codes(Event* event)
 {
     if (!ReadInto(0))
         return false;
 
-    if (buffer[0] == '1')
-    {
-        if (!ReadInto(0) || buffer[0] != ';' || ReadInto(0))
-            return false;
-
-        if ('0' > buffer[0] || buffer[0] > '9')
-            return false;
-
-        u8 value = buffer[0] - '0';
-        if (!ReadInto(0))
-            return false;
-
-        if ('0' <= buffer[0] && buffer[0] <= '9')
-        {
-            value = value * 10 + buffer[0] - '0';
-
-            if (!ReadInto(0))
-                return false;
-        }
-
-        event->Key.Modifiers = GetKeyModifiers(value);
-    }
+    if (buffer[0] == '1' && (!ReadInto(0) || buffer[0] != ';' || !ReadKeyModifiers(event, 0)))
+        return false;
 
     event->Kind = KeyEvent;
     switch (buffer[0])
@@ -308,10 +309,10 @@ bool HandleCSICodes(Event* event)
     if (!ReadInto(0))
         return false;
 
-    if ('A' <= buffer[0] && buffer[0] <= 'Z')
+    if (IsUppercase(buffer[0]))
         return HandleXTermCode(event);
 
-    if ('0' > buffer[0] || buffer[0] > '9')
+    if (!IsDigit(buffer[0]))
     {
         printf("Unknown CSI code (%d): %d\r\n", __LINE__, buffer[0]);
         return false;
@@ -325,27 +326,13 @@ bool HandleCSICodes(Event* event)
 
     if (buffer[1] == ';')
     {
-        if (!ReadInto(2) || ('0' > buffer[2] || buffer[2] > '9'))
+        if (!ReadKeyModifiers(event, 2))
             return false;
-
-        u8 value = buffer[2] - '0';
-        if (!ReadInto(2))
-            return false;
-
-        if ('0' <= buffer[2] && buffer[2] <= '9')
-        {
-            value = value * 10 + buffer[2] - '0';
-
-            if (!ReadInto(2))
-                return false;
-        }
-
-        event->Key.Modifiers = GetKeyModifiers(value);
 
         if (buffer[2] == '~')
             return HandleVTCodes(event);
 
-        if ('A' <= buffer[2] && buffer[2] <= 'Z' && buffer[0] == '1')
+        if (IsUppercase(buffer[2]) && buffer[0] == '1')
         {
             buffer[0] = buffer[2];
             return HandleXTermCode(event);
@@ -354,7 +341,7 @@ bool HandleCSICodes(Event* event)
         printf("Unknown CSI code (%d): %d\r\n", __LINE__, buffer[2]);
         return false;
     }
-    else if ('0' <= buffer[1] && buffer[1] <= '9')
+    else if (IsDigit(buffer[1]))
     {
         if (!ReadInto(2))
             return false;
@@ -364,22 +351,8 @@ bool HandleCSICodes(Event* event)
 
         if (buffer[2] == ';')
         {
-            if (!ReadInto(2) || ('0' > buffer[2] || buffer[2] > '9'))
+            if (!ReadKeyModifiers(event, 2))
                 return false;
-
-            u8 value = buffer[2] - '0';
-            if (!ReadInto(2))
-                return false;
-
-            if ('0' <= buffer[2] && buffer[2] <= '9')
-            {
-                value = value * 10 + buffer[2] - '0';
-
-                if (!ReadInto(2))
-                    return false;
-            }
-
-            event->Key.Modifiers = GetKeyModifiers(value);
 
             if (buffer[2] == '~')
                 return HandleVTFunctionCodes(event);
@@ -388,7 +361,7 @@ bool HandleCSICodes(Event* event)
             return false;
         }
 
-        if ('A' <= buffer[2] && buffer[2] <= 'Z')
+        if (IsUppercase(buffer[2]))
         {
             u8 value = (buffer[0] - '0') * 10 + buffer[1] - '0';
             event->Key.Modifiers = GetKeyModifiers(value);
@@ -399,7 +372,7 @@ bool HandleCSICodes(Event* event)
         return false;
     }
 
-    if ('A' <= buffer[1] && buffer[1] <= 'Z')
+    if (IsUppercase(buffer[1]))
     {
         u8 value = buffer[0] - '0';
         event->Key.Modifiers = GetKeyModifiers(value);
@@ -492,7 +465,7 @@ bool PollEvent(Event* event)
         event->Key.Modifiers |= CtrlModifier;
     }
 
-    if ('A' <= buffer[0] && buffer[0] <= 'Z')
+    if (IsUppercase(buffer[0]))
         event->Key.Modifiers |= ShiftModifier;
 
     return true;
