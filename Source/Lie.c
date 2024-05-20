@@ -17,14 +17,12 @@ int main(int argc, const char* argv[])
     {
         while (PollEvent(&event))
         {
-            if (event.Kind == EK_Key)
+            if (event.Kind == KeyEvent)
             {
-                if (event.Key.Code == 'q')
-                {
+                if (event.Key.Code == Character && event.Key.Value == 'q')
                     running = false;
-                }
 
-                printf("Key: %d\r\n", event.Key.Code);
+                printf("KeyEvent { Code: %hu, Value: %hu, Modifiers: %hu }\r\n", event.Key.Code, event.Key.Value, event.Key.Modifiers);
             }
         }
     }
