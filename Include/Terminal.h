@@ -5,11 +5,16 @@
 #include <Event.h>
 #include <Command.h>
 
-void EnableRawMode();
-void DisableRawMode();
+typedef struct Terminal Terminal;
 
-bool PollEvent(Event* event);
+Terminal* CreateTerminal();
+void DestroyTerminal(Terminal* terminal);
 
-void ProcessCommandQueue(CommandQueue* queue);
+void EnableRawMode(Terminal* terminal);
+void DisableRawMode(Terminal* terminal);
+
+bool ReadEvent(Terminal* terminal, Event* event);
+
+void ProcessCommandQueue(Terminal* terminal, CommandQueue* queue);
 
 #endif

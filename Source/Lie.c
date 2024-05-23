@@ -1,6 +1,4 @@
 #include <Core.h>
-#include <stdio.h>
-
 #include <Terminal.h>
 
 int main(int argc, const char* argv[])
@@ -11,48 +9,59 @@ int main(int argc, const char* argv[])
     CommandQueue queue;
     InitializeCommandQueue(&queue);
 
+    Terminal* terminal = CreateTerminal();
+
     u8 x = 1;
     u8 y = 1;
 
-    EnableRawMode();
+    EnableRawMode(terminal);
 
     bool running = true;
 
     Event event;
+    Command command;
+
     while (running)
     {
-        if (PollEvent(&event))
-        {
-            if (event.Kind == KeyEvent)
-            {
-                if (event.Key.Code == Character && event.Key.Value == 'q')
-                    running = false;
+        MakeMoveCursorCommand(&command, 1, 1);
+        EnqueueCommandQueue(&queue, command);
 
-                if (event.Key.Code == UpKey)
-                    y--;
-                else if (event.Key.Code == DownKey)
-                    y++;
-                else if (event.Key.Code == RightKey)
-                    x++;
-                else if (event.Key.Code == LeftKey)
-                    x--;
+        MakeClearScreenCommand(&command, CLEAR_SCREEN_ENTIRE);
+        EnqueueCommandQueue(&queue, command);
 
-                // printf("KeyEvent { Code: %hu, Value: %hu, Modifiers: %hu }\r\n", event.Key.Code, event.Key.Value, event.Key.Modifiers);
-            }
-        }
+        MakeMoveCursorCommand(&command, 1, 1);
+        EnqueueCommandQueue(&queue, command);
 
+        MakePrintCommand(&command, (u8*)"Lie Terminal Test", 17);
+        EnqueueCommandQueue(&queue, command);
+
+        MakeMoveCursorCommand(&command, x, y);
+        EnqueueCommandQueue(&queue, command);
+
+        ProcessCommandQueue(terminal, &queue);
         ClearCommandQueue(&queue);
 
-        EnqueueMoveCursor(&queue, 1, 1);
-        EnqueueClearScreen(&queue, ClearScreenEntire);
-        EnqueueMoveCursor(&queue, 1, 1);
-        EnqueuePrint(&queue, (u8*)"Lie Terminal Test", 17);
-        EnqueueMoveCursor(&queue, x, y);
+        if (ReadEvent(terminal, &event))
+        {
+            if (event.Kind == EVENT_KEY)
+            {
+                if (event.Key.Code == KEY_CODE_CHARACTER && event.Key.Value == 'q')
+                    running = false;
 
-        ProcessCommandQueue(&queue);
+                if (event.Key.Code == KEY_CODE_UP)
+                    y--;
+                else if (event.Key.Code == KEY_CODE_DOWN)
+                    y++;
+                else if (event.Key.Code == KEY_CODE_RIGHT)
+                    x++;
+                else if (event.Key.Code == KEY_CODE_LEFT)
+                    x--;
+            }
+        }
     }
 
-    DisableRawMode();
+    DisableRawMode(terminal);
+    DestroyTerminal(terminal);
 
     FinalizeCommandQueue(&queue);
     return 0;

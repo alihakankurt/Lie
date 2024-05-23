@@ -2,18 +2,35 @@
 
 #if defined(LIE_PLATFORM_LINUX) || defined(LIE_PLATFORM_MACOS)
 
-#include <stdio.h>
+#include <Utility.h>
+
 #include <termios.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 
-struct termios original;
-u8 buffer[8];
-
-void EnableRawMode()
+struct Terminal
 {
-    tcgetattr(STDIN_FILENO, &original);
-    struct termios raw = original;
+    struct termios originalTermios;
+
+    u8 input[4];
+};
+
+Terminal* CreateTerminal()
+{
+    Terminal* terminal = (Terminal*)MemoryAllocate(sizeof(Terminal));
+    return terminal;
+}
+
+void DestroyTerminal(Terminal* terminal)
+{
+    MemoryFree(terminal);
+}
+
+void EnableRawMode(Terminal* terminal)
+{
+    tcgetattr(STDIN_FILENO, &terminal->originalTermios);
+    struct termios raw = terminal->originalTermios;
     raw.c_iflag &= ~(tcflag_t)(BRKINT | INPCK | ISTRIP | ICRNL | IXON);
     raw.c_oflag &= ~(tcflag_t)(OPOST);
     raw.c_cflag |= (tcflag_t)(CS8);
@@ -23,14 +40,14 @@ void EnableRawMode()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
-void DisableRawMode()
+void DisableRawMode(Terminal* terminal)
 {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &original);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal->originalTermios);
 }
 
-bool ReadInto(usize index)
+bool ReadInto(Terminal* terminal, usize index)
 {
-    return read(STDIN_FILENO, &buffer[index], 1) == 1;
+    return read(STDIN_FILENO, &terminal->input[index], 1) == 1;
 }
 
 KeyModifier GetKeyModifiers(u8 value)
@@ -40,31 +57,31 @@ KeyModifier GetKeyModifiers(u8 value)
     KeyModifier modifiers = 0;
 
     if ((value & 0x1) == 0x1)
-        modifiers |= ShiftModifier;
+        modifiers |= KEY_MODIFIER_SHIFT;
 
     if ((value & 0x2) == 0x2)
-        modifiers |= AltModifier;
+        modifiers |= KEY_MODIFIER_ALT;
 
     if ((value & 0x4) == 0x4)
-        modifiers |= CtrlModifier;
+        modifiers |= KEY_MODIFIER_CONTROL;
 
     return modifiers;
 }
 
-bool ReadKeyModifiers(Event* event, usize index)
+bool ReadKeyModifiers(Terminal* terminal, Event* event, usize index)
 {
-    if (!ReadInto(index) || !IsDigit(buffer[index]))
+    if (!ReadInto(terminal, index) || !IsDigit(terminal->input[index]))
         return false;
 
-    u8 value = buffer[index] - '0';
-    if (!ReadInto(index))
+    u8 value = terminal->input[index] - '0';
+    if (!ReadInto(terminal, index))
         return false;
 
-    if (IsDigit(buffer[index]))
+    if (IsDigit(terminal->input[index]))
     {
-        value = value * 10 + buffer[index] - '0';
+        value = value * 10 + terminal->input[index] - '0';
 
-        if (!ReadInto(index))
+        if (!ReadInto(terminal, index))
             return false;
     }
 
@@ -72,100 +89,100 @@ bool ReadKeyModifiers(Event* event, usize index)
     return true;
 }
 
-bool HandleSS3Codes(Event* event)
+bool HandleSS3Codes(Terminal* terminal, Event* event)
 {
-    if (!ReadInto(0))
+    if (!ReadInto(terminal, 0))
         return false;
 
-    if (buffer[0] == '1' && (!ReadInto(0) || buffer[0] != ';' || !ReadKeyModifiers(event, 0)))
+    if (terminal->input[0] == '1' && (!ReadInto(terminal, 0) || terminal->input[0] != ';' || !ReadKeyModifiers(terminal, event, 0)))
         return false;
 
-    event->Kind = KeyEvent;
-    switch (buffer[0])
+    event->Kind = EVENT_KEY;
+    switch (terminal->input[0])
     {
         case 'A':
-            event->Key.Code = UpKey;
+            event->Key.Code = KEY_CODE_UP;
             return true;
         case 'B':
-            event->Key.Code = DownKey;
+            event->Key.Code = KEY_CODE_DOWN;
             return true;
         case 'C':
-            event->Key.Code = RightKey;
+            event->Key.Code = KEY_CODE_RIGHT;
             return true;
         case 'D':
-            event->Key.Code = LeftKey;
+            event->Key.Code = KEY_CODE_LEFT;
             return true;
         case 'F':
-            event->Key.Code = EndKey;
+            event->Key.Code = KEY_CODE_END;
             return true;
         case 'H':
-            event->Key.Code = HomeKey;
+            event->Key.Code = KEY_CODE_HOME;
             return true;
         case 'P':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 1;
             return true;
         case 'Q':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 2;
             return true;
         case 'R':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 3;
             return true;
         case 'S':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 4;
             return true;
         default:
-            printf("Unknown SS3 code (%d): %d\r\n", __LINE__, buffer[1]);
+            printf("Unknown SS3 code (%d): %d\r\n", __LINE__, terminal->input[1]);
             return false;
     }
 }
 
-bool HandleVTCodes(Event* event)
+bool HandleVTCodes(Terminal* terminal, Event* event)
 {
-    event->Kind = KeyEvent;
-    switch (buffer[0])
+    event->Kind = EVENT_KEY;
+    switch (terminal->input[0])
     {
         case '1':
-            event->Key.Code = HomeKey;
+            event->Key.Code = KEY_CODE_HOME;
             return true;
         case '2':
-            event->Key.Code = InsertKey;
+            event->Key.Code = KEY_CODE_INSERT;
             return true;
         case '3':
-            event->Key.Code = DeleteKey;
+            event->Key.Code = KEY_CODE_DELETE;
             return true;
         case '4':
-            event->Key.Code = EndKey;
+            event->Key.Code = KEY_CODE_END;
             return true;
         case '5':
-            event->Key.Code = PageUpKey;
+            event->Key.Code = KEY_CODE_PAGE_UP;
             return true;
         case '6':
-            event->Key.Code = PageDownKey;
+            event->Key.Code = KEY_CODE_PAGE_DOWN;
             return true;
         case '7':
-            event->Key.Code = HomeKey;
+            event->Key.Code = KEY_CODE_HOME;
             return true;
         case '8':
-            event->Key.Code = EndKey;
+            event->Key.Code = KEY_CODE_END;
             return true;
         default:
-            printf("Unknown VT code (%d): %d\r\n", __LINE__, buffer[0]);
+            printf("Unknown VT code (%d): %d\r\n", __LINE__, terminal->input[0]);
             return false;
     }
 }
 
-bool HandleVTFunctionCodes(Event* event)
+bool HandleVTFunctionCodes(Terminal* terminal, Event* event)
 {
-    event->Kind = KeyEvent;
-    event->Key.Code = FunctionKey;
-    switch (buffer[0])
+    event->Kind = EVENT_KEY;
+    event->Key.Code = KEY_CODE_FUNCTION;
+    switch (terminal->input[0])
     {
         case '1':
-            switch (buffer[1])
+            switch (terminal->input[1])
             {
                 case '0':
                     event->Key.Value = 0;
@@ -195,12 +212,12 @@ bool HandleVTFunctionCodes(Event* event)
                     event->Key.Value = 8;
                     return true;
                 default:
-                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, buffer[1]);
+                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[1]);
                     return false;
             }
 
         case '2':
-            switch (buffer[1])
+            switch (terminal->input[1])
             {
                 case '0':
                     event->Key.Value = 9;
@@ -227,12 +244,12 @@ bool HandleVTFunctionCodes(Event* event)
                     event->Key.Value = 16;
                     return true;
                 default:
-                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, buffer[1]);
+                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[1]);
                     return false;
             }
 
         case '3':
-            switch (buffer[1])
+            switch (terminal->input[1])
             {
                 case '1':
                     event->Key.Value = 17;
@@ -247,254 +264,254 @@ bool HandleVTFunctionCodes(Event* event)
                     event->Key.Value = 20;
                     return true;
                 default:
-                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, buffer[1]);
+                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[1]);
                     return false;
             }
         default:
-            printf("Unknown VT Function code (%d): %d\r\n", __LINE__, buffer[0]);
+            printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[0]);
             return false;
     }
 }
 
-bool HandleXTermCode(Event* event)
+bool HandleXTermCode(Terminal* terminal, Event* event)
 {
-    event->Kind = KeyEvent;
-    switch (buffer[0])
+    event->Kind = EVENT_KEY;
+    switch (terminal->input[0])
     {
         case 'A':
-            event->Key.Code = UpKey;
+            event->Key.Code = KEY_CODE_UP;
             return true;
         case 'B':
-            event->Key.Code = DownKey;
+            event->Key.Code = KEY_CODE_DOWN;
             return true;
         case 'C':
-            event->Key.Code = RightKey;
+            event->Key.Code = KEY_CODE_RIGHT;
             return true;
         case 'D':
-            event->Key.Code = LeftKey;
+            event->Key.Code = KEY_CODE_LEFT;
             return true;
         case 'F':
-            event->Key.Code = EndKey;
+            event->Key.Code = KEY_CODE_END;
             return true;
         case 'H':
-            event->Key.Code = HomeKey;
+            event->Key.Code = KEY_CODE_HOME;
             return true;
         case 'P':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 1;
             return true;
         case 'Q':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 2;
             return true;
         case 'R':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 3;
             return true;
         case 'S':
-            event->Key.Code = FunctionKey;
+            event->Key.Code = KEY_CODE_FUNCTION;
             event->Key.Value = 4;
             return true;
         case 'Z':
-            event->Key.Code = TabKey;
-            event->Key.Modifiers |= ShiftModifier;
+            event->Key.Code = KEY_CODE_TAB;
+            event->Key.Modifiers |= KEY_MODIFIER_SHIFT;
             return true;
         default:
-            printf("Unknown XTerm code (%d): %d\r\n", __LINE__, buffer[0]);
+            printf("Unknown XTerm code (%d): %d\r\n", __LINE__, terminal->input[0]);
             return false;
     }
 }
 
-bool HandleCSICodes(Event* event)
+bool HandleCSICodes(Terminal* terminal, Event* event)
 {
-    if (!ReadInto(0))
+    if (!ReadInto(terminal, 0))
         return false;
 
-    if (IsUppercase(buffer[0]))
-        return HandleXTermCode(event);
+    if (IsUppercase(terminal->input[0]))
+        return HandleXTermCode(terminal, event);
 
-    if (!IsDigit(buffer[0]))
+    if (!IsDigit(terminal->input[0]))
     {
-        printf("Unknown CSI code (%d): %d\r\n", __LINE__, buffer[0]);
+        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[0]);
         return false;
     }
 
-    if (!ReadInto(1))
+    if (!ReadInto(terminal, 1))
         return false;
 
-    if (buffer[1] == '~')
-        return HandleVTCodes(event);
+    if (terminal->input[1] == '~')
+        return HandleVTCodes(terminal, event);
 
-    if (buffer[1] == ';')
+    if (terminal->input[1] == ';')
     {
-        if (!ReadKeyModifiers(event, 2))
+        if (!ReadKeyModifiers(terminal, event, 2))
             return false;
 
-        if (buffer[2] == '~')
-            return HandleVTCodes(event);
+        if (terminal->input[2] == '~')
+            return HandleVTCodes(terminal, event);
 
-        if (IsUppercase(buffer[2]) && buffer[0] == '1')
+        if (IsUppercase(terminal->input[2]) && terminal->input[0] == '1')
         {
-            buffer[0] = buffer[2];
-            return HandleXTermCode(event);
+            terminal->input[0] = terminal->input[2];
+            return HandleXTermCode(terminal, event);
         }
 
-        printf("Unknown CSI code (%d): %d\r\n", __LINE__, buffer[2]);
+        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[2]);
         return false;
     }
-    else if (IsDigit(buffer[1]))
+    else if (IsDigit(terminal->input[1]))
     {
-        if (!ReadInto(2))
+        if (!ReadInto(terminal, 2))
             return false;
 
-        if (buffer[2] == '~')
-            return HandleVTFunctionCodes(event);
+        if (terminal->input[2] == '~')
+            return HandleVTFunctionCodes(terminal, event);
 
-        if (buffer[2] == ';')
+        if (terminal->input[2] == ';')
         {
-            if (!ReadKeyModifiers(event, 2))
+            if (!ReadKeyModifiers(terminal, event, 2))
                 return false;
 
-            if (buffer[2] == '~')
-                return HandleVTFunctionCodes(event);
+            if (terminal->input[2] == '~')
+                return HandleVTFunctionCodes(terminal, event);
 
-            printf("Unknown CSI code (%d): %d\r\n", __LINE__, buffer[2]);
+            printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[2]);
             return false;
         }
 
-        if (IsUppercase(buffer[2]))
+        if (IsUppercase(terminal->input[2]))
         {
-            u8 value = (buffer[0] - '0') * 10 + buffer[1] - '0';
+            u8 value = (terminal->input[0] - '0') * 10 + terminal->input[1] - '0';
             event->Key.Modifiers = GetKeyModifiers(value);
-            return HandleXTermCode(event);
+            return HandleXTermCode(terminal, event);
         }
 
-        printf("Unknown CSI code (%d): %d\r\n", __LINE__, buffer[2]);
+        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[2]);
         return false;
     }
 
-    if (IsUppercase(buffer[1]))
+    if (IsUppercase(terminal->input[1]))
     {
-        u8 value = buffer[0] - '0';
+        u8 value = terminal->input[0] - '0';
         event->Key.Modifiers = GetKeyModifiers(value);
-        return HandleXTermCode(event);
+        return HandleXTermCode(terminal, event);
     }
 
-    printf("Unknown CSI code (%d): %d\r\n", __LINE__, buffer[1]);
+    printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[1]);
     return false;
 }
 
-bool HandleEscapeCode(Event* event)
+bool HandleEscapeCode(Terminal* terminal, Event* event)
 {
-    if (!ReadInto(0) || buffer[0] == '\x1B')
+    if (!ReadInto(terminal, 0) || terminal->input[0] == '\x1B')
     {
-        event->Kind = KeyEvent;
-        event->Key.Code = EscapeKey;
+        event->Kind = EVENT_KEY;
+        event->Key.Code = KEY_CODE_ESCAPE;
         return true;
     }
 
-    if (buffer[0] == 'O')
-        return HandleSS3Codes(event);
+    if (terminal->input[0] == 'O')
+        return HandleSS3Codes(terminal, event);
 
-    if (buffer[0] == '[')
-        return HandleCSICodes(event);
+    if (terminal->input[0] == '[')
+        return HandleCSICodes(terminal, event);
 
-    if (buffer[0] == 'b')
+    if (terminal->input[0] == 'b')
     {
-        event->Kind = KeyEvent;
-        event->Key.Code = LeftKey;
+        event->Kind = EVENT_KEY;
+        event->Key.Code = KEY_CODE_LEFT;
 #if defined(LIE_PLATFORM_LINUX)
-        event->Key.Modifiers = CtrlModifier;
+        event->Key.Modifiers = KEY_MODIFIER_CONTROL;
 #elif defined(LIE_PLATFORM_MACOS)
-        event->Key.Modifiers = AltModifier;
+        event->Key.Modifiers = KEY_MODIFIER_CONTROL;
 #endif
         return true;
     }
 
-    if (buffer[0] == 'f')
+    if (terminal->input[0] == 'f')
     {
-        event->Kind = KeyEvent;
-        event->Key.Code = RightKey;
+        event->Kind = EVENT_KEY;
+        event->Key.Code = KEY_CODE_RIGHT;
 #if defined(LIE_PLATFORM_LINUX)
-        event->Key.Modifiers = CtrlModifier;
+        event->Key.Modifiers = KEY_MODIFIER_CONTROL;
 #elif defined(LIE_PLATFORM_MACOS)
-        event->Key.Modifiers = AltModifier;
+        event->Key.Modifiers = KEY_MODIFIER_CONTROL;
 #endif
         return true;
     }
 
-    printf("Unknown escape code (%d): %d\r\n", __LINE__, buffer[0]);
+    printf("Unknown escape code (%d): %d\r\n", __LINE__, terminal->input[0]);
     return false;
 }
 
-bool PollEvent(Event* event)
+bool ReadEvent(Terminal* terminal, Event* event)
 {
     *event = (Event){0};
 
-    if (!ReadInto(0))
+    if (!ReadInto(terminal, 0))
         return false;
 
-    if (buffer[0] == '\x1B')
-        return HandleEscapeCode(event);
+    if (terminal->input[0] == '\x1B')
+        return HandleEscapeCode(terminal, event);
 
-    event->Kind = KeyEvent;
+    event->Kind = EVENT_KEY;
 
-    if (buffer[0] == '\xD')
+    if (terminal->input[0] == '\xD')
     {
-        event->Key.Code = EnterKey;
+        event->Key.Code = KEY_CODE_ENTER;
         return true;
     }
 
-    if (buffer[0] == '\x9')
+    if (terminal->input[0] == '\x9')
     {
-        event->Key.Code = TabKey;
+        event->Key.Code = KEY_CODE_TAB;
         return true;
     }
 
-    if (buffer[0] == '\x7F')
+    if (terminal->input[0] == '\x7F')
     {
-        event->Key.Code = BackspaceKey;
+        event->Key.Code = KEY_CODE_BACKSPACE;
         return true;
     }
 
-    event->Key.Code = Character;
-    event->Key.Value = buffer[0];
+    event->Key.Code = KEY_CODE_CHARACTER;
+    event->Key.Value = terminal->input[0];
 
-    if ('\x01' <= buffer[0] && buffer[0] <= '\x1F')
+    if ('\x01' <= terminal->input[0] && terminal->input[0] <= '\x1F')
     {
         event->Key.Value ^= 64;
-        event->Key.Modifiers |= CtrlModifier;
+        event->Key.Modifiers |= KEY_MODIFIER_CONTROL;
     }
 
-    if (IsUppercase(buffer[0]))
-        event->Key.Modifiers |= ShiftModifier;
+    if (IsUppercase(terminal->input[0]))
+        event->Key.Modifiers |= KEY_MODIFIER_SHIFT;
 
     return true;
 }
 
-void ProcessCommandQueue(CommandQueue* queue)
+void ProcessCommandQueue(Terminal* terminal, CommandQueue* queue)
 {
-    if (queue->Count == 0)
-        return;
-
-    for (Command* command = queue->Items; command < queue->Items + queue->Count; ++command)
+    Command command;
+    while (DequeueCommandQueue(queue, &command))
     {
-        switch (command->Kind)
+        switch (command.Kind)
         {
-            case PrintCommand:
-                write(STDOUT_FILENO, command->Print.Data, command->Print.Length);
+            case COMMAND_NONE:
                 break;
-            case MoveCursorCommand:
-                sprintf((char*)buffer, "\x1B[%hu;%huH", command->MoveCursor.Y, command->MoveCursor.X);
-                write(STDOUT_FILENO, buffer, strlen((char*)buffer));
+            case COMMAND_PRINT:
+                write(STDOUT_FILENO, command.Print.Data, command.Print.Length);
                 break;
-            case ClearScreenCommand:
-                sprintf((char*)buffer, "\x1B[%huJ", command->ClearScreen.Value);
-                write(STDOUT_FILENO, buffer, strlen((char*)buffer));
+            case COMMAND_MOVE_CURSOR:
+                sprintf((char*)terminal->input, "\x1B[%hu;%huH", command.MoveCursor.Y, command.MoveCursor.X);
+                write(STDOUT_FILENO, terminal->input, strlen((char*)terminal->input));
                 break;
-            case ClearLineCommand:
-                sprintf((char*)buffer, "\x1B[%huK", command->ClearLine.Value);
-                write(STDOUT_FILENO, buffer, strlen((char*)buffer));
+            case COMMAND_CLEAR_SCREEN:
+                sprintf((char*)terminal->input, "\x1B[%huJ", command.ClearScreen.Value);
+                write(STDOUT_FILENO, terminal->input, strlen((char*)terminal->input));
+                break;
+            case COMMAND_CLEAR_LINE:
+                sprintf((char*)terminal->input, "\x1B[%huK", command.ClearLine.Value);
+                write(STDOUT_FILENO, terminal->input, strlen((char*)terminal->input));
                 break;
         }
     }

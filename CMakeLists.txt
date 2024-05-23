@@ -22,7 +22,6 @@ if (CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
         -Wall -Wextra # Enable all warnings
 
         -Wshadow # Warn whenever a local variable shadows another local variable
-        -Wcast-align # Warn whenever a cast changes the alignment of the pointer
         -Wconversion # Warn for implicit conversions that may alter a value
         -Wsign-conversion # Warn for implicit conversions that may change the sign of an integer value
         -Wunused # Warn whenever a local variable is unused
@@ -30,10 +29,9 @@ if (CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
         -Wmissing-noreturn # Warn about functions which might be candidates for attribute noreturn
         -Wunreachable-code # Warn about code that will never be executed
 
-        -Wformat=2 # Warn about format string problems
-
         -Wno-unused-function # Disable warnings for unused functions
         -Wno-unused-parameter # Disable warnings for unused parameters
+        -Wno-non-literal-null-conversion # Disable warnings for non-literal null conversions
 
         ## Errors
         -Werror=nonnull # Error when a null pointer constant is passed to [[nonnull]] parameter
@@ -90,6 +88,8 @@ target_precompile_headers(Includes INTERFACE Include/Core.h)
 ## -------------------------- ##
 set(Sources
     Source/Lie.c
+    Source/Utility.c
+    Source/Event.c
     Source/Command.c
     Source/Terminal/Unix.c
 )

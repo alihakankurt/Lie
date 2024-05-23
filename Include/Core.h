@@ -5,7 +5,7 @@
 #define LIE_PLATFORM_WINDOWS
 #elif defined(__linux__)
 #define LIE_PLATFORM_LINUX
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && defined(__MACH__)
 #define LIE_PLATFORM_MACOS
 #else
 #error "Unsupported platform"
@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -28,24 +29,5 @@ typedef ptrdiff_t isize;
 
 typedef float f32;
 typedef double f64;
-
-typedef u8 bool;
-#define true  1
-#define false 0
-
-static bool IsDigit(u8 c)
-{
-    return '0' <= c && c <= '9';
-}
-
-static bool IsUppercase(u8 c)
-{
-    return 'A' <= c && c <= 'Z';
-}
-
-static bool IsLowercase(u8 c)
-{
-    return 'a' <= c && c <= 'z';
-}
 
 #endif
