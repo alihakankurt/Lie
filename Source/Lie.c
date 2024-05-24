@@ -1,5 +1,6 @@
 #include <Core.h>
 #include <Terminal.h>
+#include <stdio.h>
 
 int main(int argc, const char* argv[])
 {
@@ -20,6 +21,7 @@ int main(int argc, const char* argv[])
 
     Event event;
     Command command;
+    StringView text = AsStringView("Press 'q' to quit");
 
     while (running)
     {
@@ -32,7 +34,7 @@ int main(int argc, const char* argv[])
         MakeMoveCursorCommand(&command, 1, 1);
         EnqueueCommandQueue(&queue, command);
 
-        MakePrintCommand(&command, (u8*)"Lie Terminal Test", 17);
+        MakePrintCommand(&command, text);
         EnqueueCommandQueue(&queue, command);
 
         MakeMoveCursorCommand(&command, x, y);

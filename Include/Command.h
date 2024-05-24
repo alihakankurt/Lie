@@ -13,19 +13,19 @@ typedef enum CommandKind
     COMMAND_CLEAR_LINE = 4,
 } CommandKind;
 
-typedef enum ClearScreenValue
+typedef enum ClearScreenMode
 {
     CLEAR_SCREEN_TO_END = 0,
     CLEAR_SCREEN_TO_BEGIN = 1,
     CLEAR_SCREEN_ENTIRE = 2,
-} ClearScreenValue;
+} ClearScreenMode;
 
-typedef enum ClearLineValue
+typedef enum ClearLineMode
 {
     CLEAR_LINE_TO_END = 0,
     CLEAR_LINE_TO_BEGIN = 1,
     CLEAR_LINE_ENTIRE = 2,
-} ClearLineValue;
+} ClearLineMode;
 
 typedef struct Command
 {
@@ -34,8 +34,7 @@ typedef struct Command
     {
         struct PrintCommandData
         {
-            u8* Data;
-            usize Length;
+            StringView Text;
         } Print;
 
         struct MoveCursorCommandData
@@ -46,20 +45,20 @@ typedef struct Command
 
         struct ClearScreenCommandData
         {
-            ClearScreenValue Value;
+            ClearScreenMode Mode;
         } ClearScreen;
 
         struct ClearLineCommandData
         {
-            ClearLineValue Value;
+            ClearLineMode Mode;
         } ClearLine;
     };
 } Command;
 
-void MakePrintCommand(Command* command, u8* data, usize size);
+void MakePrintCommand(Command* command, StringView text);
 void MakeMoveCursorCommand(Command* command, u16 x, u16 y);
-void MakeClearScreenCommand(Command* command, ClearScreenValue value);
-void MakeClearLineCommand(Command* command, ClearLineValue value);
+void MakeClearScreenCommand(Command* command, ClearScreenMode value);
+void MakeClearLineCommand(Command* command, ClearLineMode value);
 
 DeclareQueue(CommandQueue, Command)
 

@@ -1,11 +1,10 @@
 #include <Command.h>
 #include <Utility.h>
 
-void MakePrintCommand(Command* command, u8* data, usize size)
+void MakePrintCommand(Command* command, StringView text)
 {
     command->Kind = COMMAND_PRINT;
-    command->Print.Data = data;
-    command->Print.Length = size;
+    command->Print.Text = text;
 }
 
 void MakeMoveCursorCommand(Command* command, u16 x, u16 y)
@@ -15,16 +14,16 @@ void MakeMoveCursorCommand(Command* command, u16 x, u16 y)
     command->MoveCursor.Y = y;
 }
 
-void MakeClearScreenCommand(Command* command, ClearScreenValue value)
+void MakeClearScreenCommand(Command* command, ClearScreenMode mode)
 {
     command->Kind = COMMAND_CLEAR_SCREEN;
-    command->ClearScreen.Value = value;
+    command->ClearScreen.Mode = mode;
 }
 
-void MakeClearLineCommand(Command* command, ClearLineValue value)
+void MakeClearLineCommand(Command* command, ClearLineMode mode)
 {
     command->Kind = COMMAND_CLEAR_LINE;
-    command->ClearLine.Value = value;
+    command->ClearLine.Mode = mode;
 }
 
 ImplementQueue(CommandQueue, Command)

@@ -34,41 +34,134 @@ void MemoryClear(void* destination, usize size)
 
 void MemorySet(void* destination, u8 value, usize size)
 {
-    u8* dst = (u8*)destination;
-
-    while (size >= sizeof(u64))
-    {
-        *(u64*)dst = *(u64*)&value;
-        dst += sizeof(u64);
-        size -= sizeof(u64);
-    }
-
     while (size >= sizeof(u8))
     {
-        *dst = value;
-        dst += sizeof(u8);
+        *(u8*)destination = value;
+        destination = (u8*)destination + 1;
         size -= sizeof(u8);
     }
 }
 
-void MemoryCopy(void* destination, void* source, usize size)
+void MemoryCopy(void* destination, const void* source, usize size)
 {
-    u8* dst = (u8*)destination;
-    u8* src = (u8*)source;
-
     while (size >= sizeof(u64))
     {
-        *(u64*)dst = *(u64*)src;
-        dst += sizeof(u64);
-        src += sizeof(u64);
+        *(u64*)destination = *(u64*)source;
+        destination = (u64*)destination + 1;
+        source = (u64*)source + 1;
         size -= sizeof(u64);
     }
 
     while (size >= sizeof(u8))
     {
-        *dst = *src;
-        dst += sizeof(u8);
-        src += sizeof(u8);
+        *(u8*)destination = *(u8*)source;
+        destination = (u8*)destination + 1;
+        source = (u8*)source + 1;
         size -= sizeof(u8);
     }
+}
+
+usize GetStrLength(const char* str)
+{
+    usize length = 0;
+    while (str[length] != '\0')
+    {
+        length++;
+    }
+
+    return length;
+}
+
+void InitializeString(String* string)
+{
+    string->Length = 0;
+    string->Capacity = 0;
+    string->Content = NULL;
+}
+
+void FinalizeString(String* string)
+{
+    if (string->Content == NULL)
+        return;
+
+    MemoryFree(string->Content);
+}
+
+void ExtendString(String* string, usize requiredCapactiy)
+{
+    if (string->Capacity >= requiredCapactiy)
+        return;
+
+    u8* newContent = MemoryAllocate(requiredCapactiy);
+    if (string->Content != NULL)
+    {
+        MemoryCopy(newContent, string->Content, string->Length);
+        MemoryFree(string->Content);
+    }
+
+    string->Content = newContent;
+    string->Capacity = requiredCapactiy;
+}
+
+void AppendChar(String* string, char c)
+{
+    ExtendString(string, string->Length + 1);
+    string->Content[string->Length] = (u8)c;
+    string->Length += 1;
+}
+
+void AppendStr(String* string, const char* str)
+{
+    usize strLength = GetStrLength(str);
+    ExtendString(string, string->Length + strLength);
+    MemoryCopy(string->Content + string->Length, str, strLength);
+    string->Length += strLength;
+}
+
+void AppendString(String* string, String* other)
+{
+    ExtendString(string, string->Length + other->Length);
+    MemoryCopy(string->Content + string->Length, other->Content, other->Length);
+    string->Length += other->Length;
+}
+
+void AppendStringView(String* string, StringView view)
+{
+    ExtendString(string, string->Length + view.Length);
+    MemoryCopy(string->Content + string->Length, view.Content, view.Length);
+    string->Length += view.Length;
+}
+
+StringView MakeStringView(String* string, usize start, usize end)
+{
+    StringView view;
+    view.Length = end - start;
+    view.Content = string->Content + start;
+    return view;
+}
+
+StringView UInt16ToStringView(u16 value)
+{
+    static u8 buffer[16];
+    StringView view;
+
+    if (value == 0)
+    {
+        buffer[0] = '0';
+        view.Length = 1;
+        view.Content = buffer;
+        return view;
+    }
+
+    usize index = 15;
+    while (value > 0)
+    {
+        buffer[index] = (u8)('0' + (value % 10));
+        value /= 10;
+        index -= 1;
+    }
+
+    view.Length = 16 - index - 1;
+    view.Content = buffer + index + 1;
+    return view;
 }

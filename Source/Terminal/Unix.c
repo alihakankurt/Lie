@@ -6,31 +6,33 @@
 
 #include <termios.h>
 #include <unistd.h>
-#include <string.h>
 #include <stdio.h>
 
 struct Terminal
 {
-    struct termios originalTermios;
+    struct termios OriginalTermios;
 
-    u8 input[4];
+    u8 In[4];
+    String Out;
 };
 
 Terminal* CreateTerminal()
 {
     Terminal* terminal = (Terminal*)MemoryAllocate(sizeof(Terminal));
+    InitializeString(&terminal->Out);
     return terminal;
 }
 
 void DestroyTerminal(Terminal* terminal)
 {
+    FinalizeString(&terminal->Out);
     MemoryFree(terminal);
 }
 
 void EnableRawMode(Terminal* terminal)
 {
-    tcgetattr(STDIN_FILENO, &terminal->originalTermios);
-    struct termios raw = terminal->originalTermios;
+    tcgetattr(STDIN_FILENO, &terminal->OriginalTermios);
+    struct termios raw = terminal->OriginalTermios;
     raw.c_iflag &= ~(tcflag_t)(BRKINT | INPCK | ISTRIP | ICRNL | IXON);
     raw.c_oflag &= ~(tcflag_t)(OPOST);
     raw.c_cflag |= (tcflag_t)(CS8);
@@ -42,12 +44,17 @@ void EnableRawMode(Terminal* terminal)
 
 void DisableRawMode(Terminal* terminal)
 {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal->originalTermios);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal->OriginalTermios);
 }
 
 bool ReadInto(Terminal* terminal, usize index)
 {
-    return read(STDIN_FILENO, &terminal->input[index], 1) == 1;
+    return read(STDIN_FILENO, &terminal->In[index], 1) == 1;
+}
+
+void WriteOut(Terminal* terminal)
+{
+    write(STDOUT_FILENO, terminal->Out.Content, terminal->Out.Length);
 }
 
 KeyModifier GetKeyModifiers(u8 value)
@@ -70,16 +77,16 @@ KeyModifier GetKeyModifiers(u8 value)
 
 bool ReadKeyModifiers(Terminal* terminal, Event* event, usize index)
 {
-    if (!ReadInto(terminal, index) || !IsDigit(terminal->input[index]))
+    if (!ReadInto(terminal, index) || !IsDigit(terminal->In[index]))
         return false;
 
-    u8 value = terminal->input[index] - '0';
+    u8 value = terminal->In[index] - '0';
     if (!ReadInto(terminal, index))
         return false;
 
-    if (IsDigit(terminal->input[index]))
+    if (IsDigit(terminal->In[index]))
     {
-        value = value * 10 + terminal->input[index] - '0';
+        value = value * 10 + terminal->In[index] - '0';
 
         if (!ReadInto(terminal, index))
             return false;
@@ -94,11 +101,11 @@ bool HandleSS3Codes(Terminal* terminal, Event* event)
     if (!ReadInto(terminal, 0))
         return false;
 
-    if (terminal->input[0] == '1' && (!ReadInto(terminal, 0) || terminal->input[0] != ';' || !ReadKeyModifiers(terminal, event, 0)))
+    if (terminal->In[0] == '1' && (!ReadInto(terminal, 0) || terminal->In[0] != ';' || !ReadKeyModifiers(terminal, event, 0)))
         return false;
 
     event->Kind = EVENT_KEY;
-    switch (terminal->input[0])
+    switch (terminal->In[0])
     {
         case 'A':
             event->Key.Code = KEY_CODE_UP;
@@ -135,7 +142,7 @@ bool HandleSS3Codes(Terminal* terminal, Event* event)
             event->Key.Value = 4;
             return true;
         default:
-            printf("Unknown SS3 code (%d): %d\r\n", __LINE__, terminal->input[1]);
+            printf("Unknown SS3 code (%d): %d\r\n", __LINE__, terminal->In[1]);
             return false;
     }
 }
@@ -143,7 +150,7 @@ bool HandleSS3Codes(Terminal* terminal, Event* event)
 bool HandleVTCodes(Terminal* terminal, Event* event)
 {
     event->Kind = EVENT_KEY;
-    switch (terminal->input[0])
+    switch (terminal->In[0])
     {
         case '1':
             event->Key.Code = KEY_CODE_HOME;
@@ -170,7 +177,7 @@ bool HandleVTCodes(Terminal* terminal, Event* event)
             event->Key.Code = KEY_CODE_END;
             return true;
         default:
-            printf("Unknown VT code (%d): %d\r\n", __LINE__, terminal->input[0]);
+            printf("Unknown VT code (%d): %d\r\n", __LINE__, terminal->In[0]);
             return false;
     }
 }
@@ -179,10 +186,10 @@ bool HandleVTFunctionCodes(Terminal* terminal, Event* event)
 {
     event->Kind = EVENT_KEY;
     event->Key.Code = KEY_CODE_FUNCTION;
-    switch (terminal->input[0])
+    switch (terminal->In[0])
     {
         case '1':
-            switch (terminal->input[1])
+            switch (terminal->In[1])
             {
                 case '0':
                     event->Key.Value = 0;
@@ -212,12 +219,12 @@ bool HandleVTFunctionCodes(Terminal* terminal, Event* event)
                     event->Key.Value = 8;
                     return true;
                 default:
-                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[1]);
+                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->In[1]);
                     return false;
             }
 
         case '2':
-            switch (terminal->input[1])
+            switch (terminal->In[1])
             {
                 case '0':
                     event->Key.Value = 9;
@@ -244,12 +251,12 @@ bool HandleVTFunctionCodes(Terminal* terminal, Event* event)
                     event->Key.Value = 16;
                     return true;
                 default:
-                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[1]);
+                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->In[1]);
                     return false;
             }
 
         case '3':
-            switch (terminal->input[1])
+            switch (terminal->In[1])
             {
                 case '1':
                     event->Key.Value = 17;
@@ -264,11 +271,11 @@ bool HandleVTFunctionCodes(Terminal* terminal, Event* event)
                     event->Key.Value = 20;
                     return true;
                 default:
-                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[1]);
+                    printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->In[1]);
                     return false;
             }
         default:
-            printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->input[0]);
+            printf("Unknown VT Function code (%d): %d\r\n", __LINE__, terminal->In[0]);
             return false;
     }
 }
@@ -276,7 +283,7 @@ bool HandleVTFunctionCodes(Terminal* terminal, Event* event)
 bool HandleXTermCode(Terminal* terminal, Event* event)
 {
     event->Kind = EVENT_KEY;
-    switch (terminal->input[0])
+    switch (terminal->In[0])
     {
         case 'A':
             event->Key.Code = KEY_CODE_UP;
@@ -317,7 +324,7 @@ bool HandleXTermCode(Terminal* terminal, Event* event)
             event->Key.Modifiers |= KEY_MODIFIER_SHIFT;
             return true;
         default:
-            printf("Unknown XTerm code (%d): %d\r\n", __LINE__, terminal->input[0]);
+            printf("Unknown XTerm code (%d): %d\r\n", __LINE__, terminal->In[0]);
             return false;
     }
 }
@@ -327,96 +334,96 @@ bool HandleCSICodes(Terminal* terminal, Event* event)
     if (!ReadInto(terminal, 0))
         return false;
 
-    if (IsUppercase(terminal->input[0]))
+    if (IsUppercase(terminal->In[0]))
         return HandleXTermCode(terminal, event);
 
-    if (!IsDigit(terminal->input[0]))
+    if (!IsDigit(terminal->In[0]))
     {
-        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[0]);
+        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->In[0]);
         return false;
     }
 
     if (!ReadInto(terminal, 1))
         return false;
 
-    if (terminal->input[1] == '~')
+    if (terminal->In[1] == '~')
         return HandleVTCodes(terminal, event);
 
-    if (terminal->input[1] == ';')
+    if (terminal->In[1] == ';')
     {
         if (!ReadKeyModifiers(terminal, event, 2))
             return false;
 
-        if (terminal->input[2] == '~')
+        if (terminal->In[2] == '~')
             return HandleVTCodes(terminal, event);
 
-        if (IsUppercase(terminal->input[2]) && terminal->input[0] == '1')
+        if (IsUppercase(terminal->In[2]) && terminal->In[0] == '1')
         {
-            terminal->input[0] = terminal->input[2];
+            terminal->In[0] = terminal->In[2];
             return HandleXTermCode(terminal, event);
         }
 
-        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[2]);
+        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->In[2]);
         return false;
     }
-    else if (IsDigit(terminal->input[1]))
+    else if (IsDigit(terminal->In[1]))
     {
         if (!ReadInto(terminal, 2))
             return false;
 
-        if (terminal->input[2] == '~')
+        if (terminal->In[2] == '~')
             return HandleVTFunctionCodes(terminal, event);
 
-        if (terminal->input[2] == ';')
+        if (terminal->In[2] == ';')
         {
             if (!ReadKeyModifiers(terminal, event, 2))
                 return false;
 
-            if (terminal->input[2] == '~')
+            if (terminal->In[2] == '~')
                 return HandleVTFunctionCodes(terminal, event);
 
-            printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[2]);
+            printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->In[2]);
             return false;
         }
 
-        if (IsUppercase(terminal->input[2]))
+        if (IsUppercase(terminal->In[2]))
         {
-            u8 value = (terminal->input[0] - '0') * 10 + terminal->input[1] - '0';
+            u8 value = (terminal->In[0] - '0') * 10 + terminal->In[1] - '0';
             event->Key.Modifiers = GetKeyModifiers(value);
             return HandleXTermCode(terminal, event);
         }
 
-        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[2]);
+        printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->In[2]);
         return false;
     }
 
-    if (IsUppercase(terminal->input[1]))
+    if (IsUppercase(terminal->In[1]))
     {
-        u8 value = terminal->input[0] - '0';
+        u8 value = terminal->In[0] - '0';
         event->Key.Modifiers = GetKeyModifiers(value);
         return HandleXTermCode(terminal, event);
     }
 
-    printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->input[1]);
+    printf("Unknown CSI code (%d): %d\r\n", __LINE__, terminal->In[1]);
     return false;
 }
 
 bool HandleEscapeCode(Terminal* terminal, Event* event)
 {
-    if (!ReadInto(terminal, 0) || terminal->input[0] == '\x1B')
+    if (!ReadInto(terminal, 0) || terminal->In[0] == '\x1B')
     {
         event->Kind = EVENT_KEY;
         event->Key.Code = KEY_CODE_ESCAPE;
         return true;
     }
 
-    if (terminal->input[0] == 'O')
+    if (terminal->In[0] == 'O')
         return HandleSS3Codes(terminal, event);
 
-    if (terminal->input[0] == '[')
+    if (terminal->In[0] == '[')
         return HandleCSICodes(terminal, event);
 
-    if (terminal->input[0] == 'b')
+    if (terminal->In[0] == 'b')
     {
         event->Kind = EVENT_KEY;
         event->Key.Code = KEY_CODE_LEFT;
@@ -428,7 +435,7 @@ bool HandleEscapeCode(Terminal* terminal, Event* event)
         return true;
     }
 
-    if (terminal->input[0] == 'f')
+    if (terminal->In[0] == 'f')
     {
         event->Kind = EVENT_KEY;
         event->Key.Code = KEY_CODE_RIGHT;
@@ -440,7 +447,7 @@ bool HandleEscapeCode(Terminal* terminal, Event* event)
         return true;
     }
 
-    printf("Unknown escape code (%d): %d\r\n", __LINE__, terminal->input[0]);
+    printf("Unknown escape code (%d): %d\r\n", __LINE__, terminal->In[0]);
     return false;
 }
 
@@ -451,39 +458,39 @@ bool ReadEvent(Terminal* terminal, Event* event)
     if (!ReadInto(terminal, 0))
         return false;
 
-    if (terminal->input[0] == '\x1B')
+    if (terminal->In[0] == '\x1B')
         return HandleEscapeCode(terminal, event);
 
     event->Kind = EVENT_KEY;
 
-    if (terminal->input[0] == '\xD')
+    if (terminal->In[0] == '\xD')
     {
         event->Key.Code = KEY_CODE_ENTER;
         return true;
     }
 
-    if (terminal->input[0] == '\x9')
+    if (terminal->In[0] == '\x9')
     {
         event->Key.Code = KEY_CODE_TAB;
         return true;
     }
 
-    if (terminal->input[0] == '\x7F')
+    if (terminal->In[0] == '\x7F')
     {
         event->Key.Code = KEY_CODE_BACKSPACE;
         return true;
     }
 
     event->Key.Code = KEY_CODE_CHARACTER;
-    event->Key.Value = terminal->input[0];
+    event->Key.Value = terminal->In[0];
 
-    if ('\x01' <= terminal->input[0] && terminal->input[0] <= '\x1F')
+    if ('\x01' <= terminal->In[0] && terminal->In[0] <= '\x1F')
     {
         event->Key.Value ^= 64;
         event->Key.Modifiers |= KEY_MODIFIER_CONTROL;
     }
 
-    if (IsUppercase(terminal->input[0]))
+    if (IsUppercase(terminal->In[0]))
         event->Key.Modifiers |= KEY_MODIFIER_SHIFT;
 
     return true;
@@ -499,22 +506,30 @@ void ProcessCommandQueue(Terminal* terminal, CommandQueue* queue)
             case COMMAND_NONE:
                 break;
             case COMMAND_PRINT:
-                write(STDOUT_FILENO, command.Print.Data, command.Print.Length);
+                AppendStringView(&terminal->Out, command.Print.Text);
                 break;
             case COMMAND_MOVE_CURSOR:
-                sprintf((char*)terminal->input, "\x1B[%hu;%huH", command.MoveCursor.Y, command.MoveCursor.X);
-                write(STDOUT_FILENO, terminal->input, strlen((char*)terminal->input));
+                AppendStr(&terminal->Out, "\x1B[");
+                AppendStringView(&terminal->Out, UInt16ToStringView(command.MoveCursor.Y));
+                AppendChar(&terminal->Out, ';');
+                AppendStringView(&terminal->Out, UInt16ToStringView(command.MoveCursor.X));
+                AppendChar(&terminal->Out, 'H');
                 break;
             case COMMAND_CLEAR_SCREEN:
-                sprintf((char*)terminal->input, "\x1B[%huJ", command.ClearScreen.Value);
-                write(STDOUT_FILENO, terminal->input, strlen((char*)terminal->input));
+                AppendStr(&terminal->Out, "\x1B[");
+                AppendStringView(&terminal->Out, UInt16ToStringView((u16)command.ClearScreen.Mode));
+                AppendChar(&terminal->Out, 'J');
                 break;
             case COMMAND_CLEAR_LINE:
-                sprintf((char*)terminal->input, "\x1B[%huK", command.ClearLine.Value);
-                write(STDOUT_FILENO, terminal->input, strlen((char*)terminal->input));
+                AppendStr(&terminal->Out, "\x1B[");
+                AppendStringView(&terminal->Out, UInt16ToStringView((u16)command.ClearLine.Mode));
+                AppendChar(&terminal->Out, 'K');
                 break;
         }
     }
+
+    WriteOut(terminal);
+    terminal->Out.Length = 0;
 }
 
 #endif
