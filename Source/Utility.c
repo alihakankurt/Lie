@@ -140,6 +140,20 @@ StringView MakeStringView(String* string, usize start, usize end)
     return view;
 }
 
+u16 StringViewToUInt16(StringView view)
+{
+    u16 value = 0;
+    for (usize index = 0; index < view.Length; index++)
+    {
+        if (!IsDigit(view.Content[index]))
+            return 0;
+
+        value = value * 10 + (view.Content[index] - '0');
+    }
+
+    return value;
+}
+
 StringView UInt16ToStringView(u16 value)
 {
     static u8 buffer[16];

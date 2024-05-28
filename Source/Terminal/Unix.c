@@ -6,13 +6,14 @@
 
 #include <termios.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <stdio.h>
 
 struct Terminal
 {
     struct termios OriginalTermios;
 
-    u8 In[4];
+    u8 In[32];
     String Out;
 };
 
@@ -55,6 +56,49 @@ bool ReadInto(Terminal* terminal, usize index)
 void WriteOut(Terminal* terminal)
 {
     write(STDOUT_FILENO, terminal->Out.Content, terminal->Out.Length);
+}
+
+bool GetTerminalSize(Terminal* terminal, u16* width, u16* height)
+{
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0)
+    {
+        *width = ws.ws_col;
+        *height = ws.ws_row;
+        return true;
+    }
+
+    return write(STDOUT_FILENO, "\x1B[s\x1B[999C\x1B[999B", 18) == 18
+        && GetCursorPosition(terminal, width, height)
+        && write(STDOUT_FILENO, "\x1B[u", 3) == 3;
+}
+
+bool GetCursorPosition(Terminal* terminal, u16* x, u16* y)
+{
+    if (write(STDOUT_FILENO, "\x1B[6n", 4) != 4)
+        return false;
+
+    usize index = 0;
+    usize semicolon = 0;
+
+    while (index <= 31 && ReadInto(terminal, index) && terminal->In[index] != 'R')
+    {
+        if (terminal->In[index] == ';')
+            semicolon = index;
+
+        index += 1;
+    }
+
+    if (terminal->In[0] != '\x1B' || terminal->In[1] != '[')
+        return false;
+
+    StringView yString = {.Content = &terminal->In[2], .Length = semicolon - 2};
+    StringView xString = {.Content = &terminal->In[semicolon + 1], .Length = index - semicolon - 1};
+
+    *y = StringViewToUInt16(yString);
+    *x = StringViewToUInt16(xString);
+
+    return true;
 }
 
 KeyModifier GetKeyModifiers(u8 value)
@@ -514,6 +558,10 @@ void ProcessCommandQueue(Terminal* terminal, CommandQueue* queue)
                 AppendChar(&terminal->Out, ';');
                 AppendStringView(&terminal->Out, UInt16ToStringView(command.MoveCursor.X));
                 AppendChar(&terminal->Out, 'H');
+                break;
+            case COMMAND_UPDATE_CURSOR_VISIBILITY:
+                AppendStr(&terminal->Out, "\x1B[?25");
+                AppendChar(&terminal->Out, command.UpdateCursorVisibility.Visible ? 'h' : 'l');
                 break;
             case COMMAND_CLEAR_SCREEN:
                 AppendStr(&terminal->Out, "\x1B[");

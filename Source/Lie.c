@@ -12,8 +12,8 @@ int main(int argc, const char* argv[])
 
     Terminal* terminal = CreateTerminal();
 
-    u8 x = 1;
-    u8 y = 1;
+    u16 cursorX = 1;
+    u16 cursorY = 1;
 
     EnableRawMode(terminal);
 
@@ -21,23 +21,48 @@ int main(int argc, const char* argv[])
 
     Event event;
     Command command;
-    StringView text = AsStringView("Press 'q' to quit");
+    u16 width, height;
+    GetTerminalSize(terminal, &width, &height);
+
+    StringView quitMessage = AsStringView("Press 'q' to quit\r\n");
+    StringView moveMessage = AsStringView("Use arrow keys to move cursor\r\n");
 
     while (running)
     {
-        MakeMoveCursorCommand(&command, 1, 1);
-        EnqueueCommandQueue(&queue, command);
-
-        MakeClearScreenCommand(&command, CLEAR_SCREEN_ENTIRE);
+        MakeHideCursorCommand(&command);
         EnqueueCommandQueue(&queue, command);
 
         MakeMoveCursorCommand(&command, 1, 1);
         EnqueueCommandQueue(&queue, command);
 
-        MakePrintCommand(&command, text);
+        for (u16 i = 1; i <= height; i++)
+        {
+            MakePrintCommand(&command, AsStringView("~"));
+            EnqueueCommandQueue(&queue, command);
+
+            if (i < height)
+            {
+                MakePrintCommand(&command, AsStringView("\r\n"));
+                EnqueueCommandQueue(&queue, command);
+            }
+
+            MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
+            EnqueueCommandQueue(&queue, command);
+        }
+
+        MakeMoveCursorCommand(&command, 1, 1);
         EnqueueCommandQueue(&queue, command);
 
-        MakeMoveCursorCommand(&command, x, y);
+        MakePrintCommand(&command, quitMessage);
+        EnqueueCommandQueue(&queue, command);
+
+        MakePrintCommand(&command, moveMessage);
+        EnqueueCommandQueue(&queue, command);
+
+        MakeMoveCursorCommand(&command, cursorX, cursorY);
+        EnqueueCommandQueue(&queue, command);
+
+        MakeShowCursorCommand(&command);
         EnqueueCommandQueue(&queue, command);
 
         ProcessCommandQueue(terminal, &queue);
@@ -51,13 +76,13 @@ int main(int argc, const char* argv[])
                     running = false;
 
                 if (event.Key.Code == KEY_CODE_UP)
-                    y--;
+                    cursorY = cursorY > 1 ? cursorY - 1 : 1;
                 else if (event.Key.Code == KEY_CODE_DOWN)
-                    y++;
-                else if (event.Key.Code == KEY_CODE_RIGHT)
-                    x++;
+                    cursorY = cursorY < height ? cursorY + 1 : height;
                 else if (event.Key.Code == KEY_CODE_LEFT)
-                    x--;
+                    cursorX = cursorX > 1 ? cursorX - 1 : 1;
+                else if (event.Key.Code == KEY_CODE_RIGHT)
+                    cursorX = cursorX < width ? cursorX + 1 : width;
             }
         }
     }

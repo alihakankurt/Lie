@@ -46,6 +46,7 @@ void AppendStringView(String* string, StringView view);
 
 StringView MakeStringView(String* string, usize start, usize end);
 
+u16 StringViewToUInt16(StringView view);
 StringView UInt16ToStringView(u16 value);
 
 #endif

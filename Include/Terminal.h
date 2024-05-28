@@ -13,6 +13,9 @@ void DestroyTerminal(Terminal* terminal);
 void EnableRawMode(Terminal* terminal);
 void DisableRawMode(Terminal* terminal);
 
+bool GetTerminalSize(Terminal* terminal, u16* width, u16* height);
+bool GetCursorPosition(Terminal* terminal, u16* x, u16* y);
+
 bool ReadEvent(Terminal* terminal, Event* event);
 
 void ProcessCommandQueue(Terminal* terminal, CommandQueue* queue);

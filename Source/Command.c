@@ -14,6 +14,18 @@ void MakeMoveCursorCommand(Command* command, u16 x, u16 y)
     command->MoveCursor.Y = y;
 }
 
+void MakeHideCursorCommand(Command* command)
+{
+    command->Kind = COMMAND_UPDATE_CURSOR_VISIBILITY;
+    command->UpdateCursorVisibility.Visible = false;
+}
+
+void MakeShowCursorCommand(Command* command)
+{
+    command->Kind = COMMAND_UPDATE_CURSOR_VISIBILITY;
+    command->UpdateCursorVisibility.Visible = true;
+}
+
 void MakeClearScreenCommand(Command* command, ClearScreenMode mode)
 {
     command->Kind = COMMAND_CLEAR_SCREEN;
