@@ -92,6 +92,7 @@ set(Sources
     Source/Event.c
     Source/Command.c
     Source/Terminal/Unix.c
+    Source/Editor.c
 )
 
 add_executable(${PROJECT_NAME} ${Sources})
