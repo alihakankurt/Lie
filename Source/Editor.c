@@ -71,6 +71,7 @@ void RefreshScreen(Editor* editor)
     EnqueueCommandQueue(&editor->Commands, command);
 
     ProcessCommandQueue(editor->Terminal, &editor->Commands);
+    ClearCommandQueue(&editor->Commands);
 }
 
 void ProcessEvent(Editor* editor, Event* event)
