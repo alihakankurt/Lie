@@ -60,6 +60,18 @@ void DisableRawMode(Terminal* terminal)
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal->OriginalTermios);
 }
 
+void EnterAlternateScreen(Terminal* terminal)
+{
+    static StringView enterCode = {.Content = "\x1B[?1049h", .Length = 8};
+    WriteStringView(enterCode);
+}
+
+void LeaveAlternateScreen(Terminal* terminal)
+{
+    static StringView leaveCode = {.Content = "\x1B[?1049l", .Length = 8};
+    WriteStringView(leaveCode);
+}
+
 bool GetTerminalSize(Terminal* terminal, u16* width, u16* height)
 {
     struct winsize ws;
@@ -70,16 +82,16 @@ bool GetTerminalSize(Terminal* terminal, u16* width, u16* height)
         return true;
     }
 
-    StringView saveCursor = AsStringView("\x1B[s");
-    StringView moveCursor = AsStringView("\x1B[999C\x1B[999B");
-    StringView restoreCursor = AsStringView("\x1B[u");
+    static StringView saveCursor = {.Length = 3, .Content = "\x1B[s"};
+    static StringView moveCursor = {.Length = 4, .Content = "\x1B[6n"};
+    static StringView restoreCursor = {.Length = 3, .Content = "\x1B[u"};
 
     return WriteStringView(saveCursor) && WriteStringView(moveCursor) && GetCursorPosition(terminal, width, height) && WriteStringView(restoreCursor);
 }
 
 bool GetCursorPosition(Terminal* terminal, u16* x, u16* y)
 {
-    StringView queryCursor = AsStringView("\x1B[6n");
+    static StringView queryCursor = {.Length = 4, .Content = "\x1B[6n"};
     if (!WriteStringView(queryCursor))
         return false;
 

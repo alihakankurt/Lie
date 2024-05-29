@@ -32,6 +32,7 @@ if (CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
         -Wno-unused-function # Disable warnings for unused functions
         -Wno-unused-parameter # Disable warnings for unused parameters
         -Wno-non-literal-null-conversion # Disable warnings for non-literal null conversions
+        -Wno-pointer-sign # Disable warnings for pointer sign comparison
 
         ## Errors
         -Werror=nonnull # Error when a null pointer constant is passed to [[nonnull]] parameter

@@ -26,6 +26,7 @@ void RunWithEmptyFile(Editor* editor)
     Event event;
 
     EnableRawMode(editor->Terminal);
+    EnterAlternateScreen(editor->Terminal);
 
     while (editor->Running)
     {
@@ -36,6 +37,7 @@ void RunWithEmptyFile(Editor* editor)
         }
     }
 
+    LeaveAlternateScreen(editor->Terminal);
     DisableRawMode(editor->Terminal);
 }
 
@@ -51,12 +53,14 @@ void RefreshScreen(Editor* editor)
 
     for (u16 i = 1; i <= editor->Height; i++)
     {
-        MakePrintCommand(&command, AsStringView("~"));
+        static StringView emptyLine = {.Length = 1, .Content = "~"};
+        MakePrintCommand(&command, emptyLine);
         EnqueueCommandQueue(&editor->Commands, command);
 
         if (i < editor->Height)
         {
-            MakePrintCommand(&command, AsStringView("\r\n"));
+            static StringView lineEnd = {.Length = 2, .Content = "\r\n"};
+            MakePrintCommand(&command, lineEnd);
             EnqueueCommandQueue(&editor->Commands, command);
         }
 
