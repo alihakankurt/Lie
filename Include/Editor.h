@@ -3,6 +3,12 @@
 
 #include <Terminal.h>
 
+typedef struct Row
+{
+    String Content;
+    struct Row* Next;
+} Row;
+
 typedef struct Editor
 {
     Terminal* Terminal;
@@ -11,6 +17,7 @@ typedef struct Editor
     u16 Width;
     u16 Height;
 
+    Row* Rows;
     u16 CursorX;
     u16 CursorY;
     bool Running;

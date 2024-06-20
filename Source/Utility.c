@@ -132,6 +132,14 @@ void AppendStringView(String* string, StringView view)
     string->Length += view.Length;
 }
 
+StringView AsStringView(String* string)
+{
+    StringView view;
+    view.Length = string->Length;
+    view.Content = string->Content;
+    return view;
+}
+
 StringView MakeStringView(String* string, usize start, usize end)
 {
     StringView view;

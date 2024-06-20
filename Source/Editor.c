@@ -10,6 +10,7 @@ void InitializeEditor(Editor* editor)
 
     GetTerminalSize(editor->Terminal, &editor->Width, &editor->Height);
 
+    editor->Rows = NULL;
     editor->CursorX = 1;
     editor->CursorY = 1;
     editor->Running = true;
@@ -17,6 +18,14 @@ void InitializeEditor(Editor* editor)
 
 void FinalizeEditor(Editor* editor)
 {
+    while (editor->Rows != NULL)
+    {
+        Row* next = editor->Rows->Next;
+        FinalizeString(&editor->Rows->Content);
+        MemoryFree(editor->Rows);
+        editor->Rows = next;
+    }
+
     DestroyTerminal(editor->Terminal);
     FinalizeCommandQueue(&editor->Commands);
 }
@@ -51,16 +60,26 @@ void RefreshScreen(Editor* editor)
     MakeMoveCursorCommand(&command, 1, 1);
     EnqueueCommandQueue(&editor->Commands, command);
 
-    for (u16 i = 1; i <= editor->Height; i++)
+    Row* row = editor->Rows;
+    for (u16 y = 1; y <= editor->Height; y += 1)
     {
-        static StringView emptyLine = {.Length = 1, .Content = "~"};
-        MakePrintCommand(&command, emptyLine);
-        EnqueueCommandQueue(&editor->Commands, command);
-
-        if (i < editor->Height)
+        if (row == NULL)
         {
-            static StringView lineEnd = {.Length = 2, .Content = "\r\n"};
-            MakePrintCommand(&command, lineEnd);
+            static StringView emptyLine = {.Length = 1, .Content = "~"};
+            MakePrintCommand(&command, emptyLine);
+            EnqueueCommandQueue(&editor->Commands, command);
+        }
+        else
+        {
+            MakePrintCommand(&command, AsStringView(&row->Content));
+            EnqueueCommandQueue(&editor->Commands, command);
+            row = row->Next;
+        }
+
+        if (y < editor->Height)
+        {
+            static StringView endLine = {.Length = 2, .Content = "\r\n"};
+            MakePrintCommand(&command, endLine);
             EnqueueCommandQueue(&editor->Commands, command);
         }
 

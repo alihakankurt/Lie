@@ -37,6 +37,7 @@ void AppendStr(String* string, const char* str);
 void AppendString(String* string, String* other);
 void AppendStringView(String* string, StringView view);
 
+StringView AsStringView(String* string);
 StringView MakeStringView(String* string, usize start, usize end);
 
 u16 StringViewToUInt16(StringView view);
