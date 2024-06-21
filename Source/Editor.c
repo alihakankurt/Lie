@@ -1,7 +1,24 @@
 #include <Editor.h>
 
-void RefreshScreen(Editor* editor);
-void ProcessEvent(Editor* editor, Event* event);
+#include <Terminal.h>
+#include <List.h>
+
+DeclareList(Rows, String);
+ImplementList(Rows, String);
+
+typedef struct Editor
+{
+    Terminal* Terminal;
+    CommandQueue Commands;
+
+    u16 Width;
+    u16 Height;
+
+    Rows Rows;
+    u16 CursorX;
+    u16 CursorY;
+    bool Running;
+} Editor;
 
 void InitializeEditor(Editor* editor)
 {
@@ -10,7 +27,7 @@ void InitializeEditor(Editor* editor)
 
     GetTerminalSize(editor->Terminal, &editor->Width, &editor->Height);
 
-    editor->Rows = NULL;
+    InitializeRows(&editor->Rows);
     editor->CursorX = 1;
     editor->CursorY = 1;
     editor->Running = true;
@@ -18,36 +35,38 @@ void InitializeEditor(Editor* editor)
 
 void FinalizeEditor(Editor* editor)
 {
-    while (editor->Rows != NULL)
-    {
-        Row* next = editor->Rows->Next;
-        FinalizeString(&editor->Rows->Content);
-        MemoryFree(editor->Rows);
-        editor->Rows = next;
-    }
+    for (usize index = 0; index < editor->Rows.Count; index += 1)
+        FinalizeString(&editor->Rows.Values[index]);
+
+    FinalizeRows(&editor->Rows);
 
     DestroyTerminal(editor->Terminal);
     FinalizeCommandQueue(&editor->Commands);
 }
 
-void RunWithEmptyFile(Editor* editor)
+void RefreshScreen(Editor* editor);
+void ProcessEvent(Editor* editor, Event* event);
+
+void RunEditorWithNoFile()
 {
+    Editor editor;
+    InitializeEditor(&editor);
+    EnableRawMode(editor.Terminal);
+    EnterAlternateScreen(editor.Terminal);
+
     Event event;
-
-    EnableRawMode(editor->Terminal);
-    EnterAlternateScreen(editor->Terminal);
-
-    while (editor->Running)
+    while (editor.Running)
     {
-        RefreshScreen(editor);
-        if (ReadEvent(editor->Terminal, &event))
+        RefreshScreen(&editor);
+        if (ReadEvent(editor.Terminal, &event))
         {
-            ProcessEvent(editor, &event);
+            ProcessEvent(&editor, &event);
         }
     }
 
-    LeaveAlternateScreen(editor->Terminal);
-    DisableRawMode(editor->Terminal);
+    LeaveAlternateScreen(editor.Terminal);
+    DisableRawMode(editor.Terminal);
+    FinalizeEditor(&editor);
 }
 
 void RefreshScreen(Editor* editor)
@@ -60,10 +79,9 @@ void RefreshScreen(Editor* editor)
     MakeMoveCursorCommand(&command, 1, 1);
     EnqueueCommandQueue(&editor->Commands, command);
 
-    Row* row = editor->Rows;
     for (u16 y = 1; y <= editor->Height; y += 1)
     {
-        if (row == NULL)
+        if (y > editor->Rows.Count)
         {
             static StringView emptyLine = {.Length = 1, .Content = "~"};
             MakePrintCommand(&command, emptyLine);
@@ -71,9 +89,8 @@ void RefreshScreen(Editor* editor)
         }
         else
         {
-            MakePrintCommand(&command, AsStringView(&row->Content));
+            MakePrintCommand(&command, AsStringView(&editor->Rows.Values[y - 1]));
             EnqueueCommandQueue(&editor->Commands, command);
-            row = row->Next;
         }
 
         if (y < editor->Height)

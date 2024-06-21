@@ -81,9 +81,6 @@ void InitializeString(String* string)
 
 void FinalizeString(String* string)
 {
-    if (string->Content == NULL)
-        return;
-
     MemoryFree(string->Content);
 }
 
