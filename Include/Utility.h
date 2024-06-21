@@ -36,11 +36,11 @@ void AppendChar(String* string, char c);
 void AppendStr(String* string, const char* str);
 void AppendString(String* string, String* other);
 void AppendStringView(String* string, StringView view);
+void AppendUInt(String* string, u64 value);
 
 StringView AsStringView(String* string);
 StringView MakeStringView(String* string, usize start, usize end);
 
-u16 StringViewToUInt16(StringView view);
-StringView UInt16ToStringView(u16 value);
+bool TryParseUInt(StringView view, u64* value);
 
 #endif

@@ -89,7 +89,9 @@ target_precompile_headers(Includes INTERFACE Include/Core.h)
 ## -------------------------- ##
 set(Sources
     Source/Lie.c
-    Source/Utility.c
+    Source/Utility/Common.c
+    Source/Utility/Unix.c
+    Source/IO/Unix.c
     Source/Event.c
     Source/Command.c
     Source/Terminal/Unix.c

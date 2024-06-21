@@ -1,7 +1,7 @@
 #include <Editor.h>
-
-#include <Terminal.h>
 #include <List.h>
+#include <IO.h>
+#include <Terminal.h>
 
 DeclareList(Rows, String);
 ImplementList(Rows, String);
@@ -49,6 +49,13 @@ void ProcessEvent(Editor* editor, Event* event);
 
 void RunEditorWithNoFile()
 {
+    if (!IsTTY())
+    {
+        static const char notTTY[36] = "Standard input/output is not a TTY.\n";
+        WriteStdOut(notTTY, 36);
+        return;
+    }
+
     Editor editor;
     InitializeEditor(&editor);
     EnableRawMode(editor.Terminal);
