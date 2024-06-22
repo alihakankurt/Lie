@@ -59,14 +59,14 @@ void DisableRawMode(Terminal* terminal)
 
 void EnterAlternateScreen(Terminal* terminal)
 {
-    static const char enterCode[8] = "\x1B[?1049h";
-    WriteStdOut(&enterCode[0], 8);
+    static const StringView enterCode = AsStringView("\x1B[?1049h");
+    WriteStdOut(enterCode.Content, enterCode.Length);
 }
 
 void LeaveAlternateScreen(Terminal* terminal)
 {
-    static const char leaveCode[8] = "\x1B[?1049l";
-    WriteStdOut(&leaveCode[0], 8);
+    static const StringView leaveCode = AsStringView("\x1B[?1049l");
+    WriteStdOut(leaveCode.Content, leaveCode.Length);
 }
 
 bool GetTerminalSize(Terminal* terminal, u16* width, u16* height)
@@ -79,18 +79,18 @@ bool GetTerminalSize(Terminal* terminal, u16* width, u16* height)
         return true;
     }
 
-    static const char saveCursor[3] = "\x1B[s";
-    static const char moveCursor[4] = "\x1B[6n";
-    static const char restoreCursor[3] = "\x1B[u";
+    static const StringView saveCursor = AsStringView("\x1B[s");
+    static const StringView moveCursor = AsStringView("\x1B[6n");
+    static const StringView restoreCursor = AsStringView("\x1B[u");
 
-    return WriteStdOut(&saveCursor[0], 3) && WriteStdOut(&moveCursor[0], 4)
-        && GetCursorPosition(terminal, width, height) && WriteStdOut(&restoreCursor[0], 3);
+    return WriteStdOut(saveCursor.Content, saveCursor.Length) && WriteStdOut(moveCursor.Content, moveCursor.Length)
+        && GetCursorPosition(terminal, width, height) && WriteStdOut(restoreCursor.Content, restoreCursor.Length);
 }
 
 bool GetCursorPosition(Terminal* terminal, u16* x, u16* y)
 {
-    static const char queryCursor[4] = "\x1B[6n";
-    if (!WriteStdOut(&queryCursor[0], 4))
+    static const StringView queryCursor = AsStringView("\x1B[6n");
+    if (!WriteStdOut(queryCursor.Content, queryCursor.Length))
         return false;
 
     usize index = 0;

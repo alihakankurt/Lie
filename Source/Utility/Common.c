@@ -82,49 +82,61 @@ void FinalizeString(String* string)
     MemoryFree(string->Content);
 }
 
-void ExtendString(String* string, usize requiredCapactiy)
+void ExtendString(String* string, usize capacity)
 {
-    if (string->Capacity >= requiredCapactiy)
+    if (string->Capacity >= capacity)
         return;
 
-    u8* newContent = MemoryAllocate(requiredCapactiy);
+    u8* content = MemoryAllocate(capacity + 1);
     if (string->Content != NULL)
     {
-        MemoryCopy(newContent, string->Content, string->Length);
+        MemoryCopy(content, string->Content, string->Length);
         MemoryFree(string->Content);
     }
 
-    string->Content = newContent;
-    string->Capacity = requiredCapactiy;
+    string->Content = content;
+    string->Capacity = capacity;
 }
 
 void AppendChar(String* string, char c)
 {
     ExtendString(string, string->Length + 1);
+
     string->Content[string->Length] = (u8)c;
     string->Length += 1;
+
+    string->Content[string->Length] = '\0';
 }
 
 void AppendStr(String* string, const char* str)
 {
     usize strLength = GetStrLength(str);
     ExtendString(string, string->Length + strLength);
+
     MemoryCopy(string->Content + string->Length, str, strLength);
     string->Length += strLength;
+
+    string->Content[string->Length] = '\0';
 }
 
 void AppendString(String* string, String* other)
 {
     ExtendString(string, string->Length + other->Length);
+
     MemoryCopy(string->Content + string->Length, other->Content, other->Length);
     string->Length += other->Length;
+
+    string->Content[string->Length] = '\0';
 }
 
 void AppendStringView(String* string, StringView view)
 {
     ExtendString(string, string->Length + view.Length);
+
     MemoryCopy(string->Content + string->Length, view.Content, view.Length);
     string->Length += view.Length;
+
+    string->Content[string->Length] = '\0';
 }
 
 void AppendUInt(String* string, u64 value)
@@ -140,14 +152,6 @@ void AppendUInt(String* string, u64 value)
 
     StringView view = {.Length = 32 - index - 1, .Content = buffer + index + 1};
     AppendStringView(string, view);
-}
-
-StringView AsStringView(String* string)
-{
-    StringView view;
-    view.Length = string->Length;
-    view.Content = string->Content;
-    return view;
 }
 
 StringView MakeStringView(String* string, usize start, usize end)

@@ -1,6 +1,9 @@
 #ifndef __LIE_EDITOR_H__
 #define __LIE_EDITOR_H__
 
-void RunEditorWithNoFile();
+#include <Utility.h>
+
+bool RunEditorWithNoFile();
+bool RunEditorWithFile(StringView filepath);
 
 #endif

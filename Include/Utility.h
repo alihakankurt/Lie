@@ -3,6 +3,9 @@
 
 #include <Core.h>
 
+#define Min(left, right) ((left) < (right) ? (left) : (right))
+#define Max(left, right) ((left) > (right) ? (left) : (right))
+
 bool IsDigit(u8 c);
 bool IsUppercase(u8 c);
 bool IsLowercase(u8 c);
@@ -24,13 +27,14 @@ typedef struct String
 typedef struct StringView
 {
     usize Length;
-    u8* Content;
+    const u8* Content;
 } StringView;
 
 usize GetStrLength(const char* str);
 
 void InitializeString(String* string);
 void FinalizeString(String* string);
+void ExtendString(String* string, usize capacity);
 
 void AppendChar(String* string, char c);
 void AppendStr(String* string, const char* str);
@@ -38,7 +42,7 @@ void AppendString(String* string, String* other);
 void AppendStringView(String* string, StringView view);
 void AppendUInt(String* string, u64 value);
 
-StringView AsStringView(String* string);
+#define AsStringView(str) ((StringView){.Length = sizeof(str) - 1, .Content = (u8*)str})
 StringView MakeStringView(String* string, usize start, usize end);
 
 bool TryParseUInt(StringView view, u64* value);
