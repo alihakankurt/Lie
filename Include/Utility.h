@@ -30,6 +30,8 @@ typedef struct StringView
     const u8* Content;
 } StringView;
 
+#define EmptyString ((String){.Length = 0, .Capacity = 0, .Content = NULL})
+
 usize GetStrLength(const char* str);
 
 void InitializeString(String* string);
