@@ -38,4 +38,16 @@ void MakeClearLineCommand(Command* command, ClearLineMode mode)
     command->ClearLine.Mode = mode;
 }
 
+void MakeSetForegroundCommand(Command* command, Color value)
+{
+    command->Kind = COMMAND_SET_FOREGROUND;
+    command->SetForeground.Value = value;
+}
+
+void MakeSetBackgroundCommand(Command* command, Color value)
+{
+    command->Kind = COMMAND_SET_BACKGROUND;
+    command->SetBackground.Value = value;
+}
+
 ImplementQueue(CommandQueue, Command)

@@ -15,11 +15,15 @@ typedef struct Editor
     u16 Height;
 
     Rows Rows;
+
     u16 CursorX;
     u16 CursorY;
     u16 OffsetX;
     u16 OffsetY;
     bool Running;
+
+    String Status;
+    u16 ErrorTimeout;
 } Editor;
 
 void InitializeEditor(Editor* editor)
@@ -35,10 +39,15 @@ void InitializeEditor(Editor* editor)
     editor->OffsetX = 0;
     editor->OffsetY = 0;
     editor->Running = true;
+
+    InitializeString(&editor->Status);
+    editor->ErrorTimeout = 0;
 }
 
 void FinalizeEditor(Editor* editor)
 {
+    FinalizeString(&editor->Status);
+
     for (usize index = 0; index < editor->Rows.Count; index += 1)
         FinalizeString(&editor->Rows.Values[index]);
 
@@ -139,28 +148,16 @@ bool RunEditor(Editor* editor)
     return true;
 }
 
-void RefreshScreen(Editor* editor)
+void PrintLines(Editor* editor, u16 offsetX, u16 offsetY)
 {
     Command command;
 
-    MakeHideCursorCommand(&command);
-    EnqueueCommandQueue(&editor->Commands, command);
-
-    usize index = editor->CursorY + editor->OffsetY - 1;
-    usize length = editor->Rows.Values[index].Length;
-
-    u16 offsetX = Min(editor->OffsetX, (u16)length);
-    u16 offsetY = editor->OffsetY;
-
-    u16 cursorX = Min(editor->CursorX, (u16)(length - offsetX + 1));
-    u16 cursorY = editor->CursorY;
-
-    for (u16 y = 1; y <= editor->Height; y += 1)
+    for (u16 y = 1; y < editor->Height; y += 1)
     {
         MakeMoveCursorCommand(&command, 1, y);
         EnqueueCommandQueue(&editor->Commands, command);
 
-        index = y + offsetY - 1;
+        usize index = y + offsetY - 1;
 
         if (index >= editor->Rows.Count)
         {
@@ -180,6 +177,90 @@ void RefreshScreen(Editor* editor)
         MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
         EnqueueCommandQueue(&editor->Commands, command);
     }
+}
+
+void PrintStatusBar(Editor* editor, u16 cursorX, u16 cursorY)
+{
+    Command command;
+
+    if (editor->ErrorTimeout > 0)
+    {
+        editor->ErrorTimeout -= 1;
+        MakeMoveCursorCommand(&command, 1, editor->Height);
+        EnqueueCommandQueue(&editor->Commands, command);
+
+        MakeSetForegroundCommand(&command, COLOR_WHITE);
+        EnqueueCommandQueue(&editor->Commands, command);
+
+        MakeSetBackgroundCommand(&command, COLOR_RED);
+        EnqueueCommandQueue(&editor->Commands, command);
+
+        MakePrintCommand(&command, MakeStringView(&editor->Status, 0, editor->Status.Length));
+        EnqueueCommandQueue(&editor->Commands, command);
+
+        MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
+        EnqueueCommandQueue(&editor->Commands, command);
+
+        MakeSetForegroundCommand(&command, COLOR_RESET);
+        EnqueueCommandQueue(&editor->Commands, command);
+
+        MakeSetBackgroundCommand(&command, COLOR_RESET);
+        EnqueueCommandQueue(&editor->Commands, command);
+        return;
+    }
+
+    MakeMoveCursorCommand(&command, 1, editor->Height);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    MakeSetForegroundCommand(&command, COLOR_BLACK);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    MakeSetBackgroundCommand(&command, COLOR_WHITE);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    static StringView status = AsStringView(" LIE - Lightweight Integrated Editor");
+    MakePrintCommand(&command, status);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    u16 targetX = editor->Width - (u16)(Log10(cursorX) + Log10(cursorY) + 4);
+    MakeMoveCursorCommand(&command, targetX, editor->Height);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    editor->Status.Length = 0;
+    AppendUInt(&editor->Status, cursorY);
+    AppendStringView(&editor->Status, AsStringView(":"));
+    AppendUInt(&editor->Status, cursorX);
+    MakePrintCommand(&command, MakeStringView(&editor->Status, 0, editor->Status.Length));
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    MakeSetForegroundCommand(&command, COLOR_RESET);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    MakeSetBackgroundCommand(&command, COLOR_RESET);
+    EnqueueCommandQueue(&editor->Commands, command);
+}
+
+void RefreshScreen(Editor* editor)
+{
+    Command command;
+
+    MakeHideCursorCommand(&command);
+    EnqueueCommandQueue(&editor->Commands, command);
+
+    usize index = editor->CursorY + editor->OffsetY - 1;
+    usize length = editor->Rows.Values[index].Length;
+
+    u16 offsetX = Min(editor->OffsetX, (u16)length);
+    u16 offsetY = editor->OffsetY;
+
+    u16 cursorX = Min(editor->CursorX, (u16)(length - offsetX + 1));
+    u16 cursorY = editor->CursorY;
+
+    PrintLines(editor, offsetX, offsetY);
+    PrintStatusBar(editor, offsetX + cursorX, offsetY + cursorY);
 
     MakeMoveCursorCommand(&command, cursorX, cursorY);
     EnqueueCommandQueue(&editor->Commands, command);
@@ -220,7 +301,7 @@ void MoveDown(Editor* editor, u16 count)
     u16 remaning = (u16)(editor->Rows.Count - editor->OffsetY);
 
     u16 move = Min(remaning - editor->CursorY, count);
-    move = Min(move, editor->Height - editor->CursorY);
+    move = Min(move, editor->Height - editor->CursorY - 1);
     editor->CursorY += move;
 
     u16 offset = Min(remaning - Min(remaning, editor->Height), count - move);
@@ -292,7 +373,15 @@ void ProcessEvent(Editor* editor, Event* event)
             {
                 case KEY_CODE_CHARACTER:
                     if (event->Key.Value == 'q')
+                    {
                         editor->Running = false;
+                    }
+                    else
+                    {
+                        editor->Status.Length = 0;
+                        AppendStringView(&editor->Status, AsStringView("Insert mode is not supported yet."));
+                        editor->ErrorTimeout = 10;
+                    }
                     break;
 
                 case KEY_CODE_UP:

@@ -7,6 +7,8 @@ It is currently in early stages of development and is not yet ready for use.
 
 ## Features
 
+- Text viewing with scroll support
+- Status bar with error messages
 - TBA
 
 ## Building

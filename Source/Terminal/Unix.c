@@ -187,6 +187,50 @@ void ProcessCommandQueue(Terminal* terminal, CommandQueue* queue)
                 AppendUInt(&terminal->Out, (u64)command.ClearLine.Mode);
                 AppendChar(&terminal->Out, 'K');
                 break;
+            case COMMAND_SET_FOREGROUND:
+                switch (command.SetForeground.Value.Kind)
+                {
+                    case COLOR_KIND_RESET:
+                        AppendStr(&terminal->Out, "\x1B[39m");
+                        break;
+                    case COLOR_KIND_RGB:
+                        AppendStr(&terminal->Out, "\x1B[38;2;");
+                        AppendUInt(&terminal->Out, command.SetForeground.Value.Red);
+                        AppendChar(&terminal->Out, ';');
+                        AppendUInt(&terminal->Out, command.SetForeground.Value.Green);
+                        AppendChar(&terminal->Out, ';');
+                        AppendUInt(&terminal->Out, command.SetForeground.Value.Blue);
+                        AppendChar(&terminal->Out, 'm');
+                        break;
+                    case COLOR_KIND_ANSI:
+                        AppendStr(&terminal->Out, "\x1B[38;5;");
+                        AppendUInt(&terminal->Out, command.SetForeground.Value.AnsiValue);
+                        AppendChar(&terminal->Out, 'm');
+                        break;
+                }
+                break;
+            case COMMAND_SET_BACKGROUND:
+                switch (command.SetBackground.Value.Kind)
+                {
+                    case COLOR_KIND_RESET:
+                        AppendStr(&terminal->Out, "\x1B[49m");
+                        break;
+                    case COLOR_KIND_RGB:
+                        AppendStr(&terminal->Out, "\x1B[48;2;");
+                        AppendUInt(&terminal->Out, command.SetBackground.Value.Red);
+                        AppendChar(&terminal->Out, ';');
+                        AppendUInt(&terminal->Out, command.SetBackground.Value.Green);
+                        AppendChar(&terminal->Out, ';');
+                        AppendUInt(&terminal->Out, command.SetBackground.Value.Blue);
+                        AppendChar(&terminal->Out, 'm');
+                        break;
+                    case COLOR_KIND_ANSI:
+                        AppendStr(&terminal->Out, "\x1B[48;5;");
+                        AppendUInt(&terminal->Out, command.SetBackground.Value.AnsiValue);
+                        AppendChar(&terminal->Out, 'm');
+                        break;
+                }
+                break;
         }
     }
 

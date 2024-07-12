@@ -49,4 +49,6 @@ StringView MakeStringView(String* string, usize start, usize end);
 
 bool TryParseUInt(StringView view, u64* value);
 
+u64 Log10(u64 value);
+
 #endif
