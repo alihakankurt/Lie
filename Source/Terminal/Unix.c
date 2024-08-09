@@ -144,11 +144,12 @@ bool ReadEvent(Terminal* terminal, Event* event)
     if ('\x01' <= terminal->In[0] && terminal->In[0] <= '\x1F')
     {
         terminal->In[0] ^= 64;
-        modifiers |= KEY_MODIFIER_CONTROL;
+        modifiers = KEY_MODIFIER_CONTROL;
     }
-
-    if (IsUppercase(terminal->In[0]))
-        modifiers |= KEY_MODIFIER_SHIFT;
+    else if (IsUppercase(terminal->In[0]))
+    {
+        modifiers = KEY_MODIFIER_SHIFT;
+    }
 
     MakeKeyEvent(event, KEY_CODE_CHARACTER, modifiers, terminal->In[0]);
     return true;

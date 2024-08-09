@@ -381,7 +381,7 @@ void ProcessEvent(Editor* editor, Event* event)
             switch (event->Key.Code)
             {
                 case KEY_CODE_CHARACTER:
-                    if (event->Key.Value == 'q')
+                    if (event->Key.Value == 'Q' && event->Key.Modifiers == KEY_MODIFIER_CONTROL)
                     {
                         editor->Running = false;
                     }
