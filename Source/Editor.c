@@ -6,6 +6,12 @@
 DeclareList(Rows, String);
 ImplementList(Rows, String);
 
+typedef enum EditorMode
+{
+    EDITOR_MODE_VIEW,
+    EDITOR_MODE_EDIT,
+} EditorMode;
+
 typedef struct Editor
 {
     Terminal* Terminal;
@@ -21,6 +27,7 @@ typedef struct Editor
     u16 OffsetX;
     u16 OffsetY;
     bool Running;
+    EditorMode Mode;
 
     String Status;
     u16 ErrorTimeout;
@@ -39,6 +46,7 @@ void InitializeEditor(Editor* editor)
     editor->OffsetX = 0;
     editor->OffsetY = 0;
     editor->Running = true;
+    editor->Mode = EDITOR_MODE_VIEW;
 
     InitializeString(&editor->Status);
     editor->ErrorTimeout = 0;
@@ -225,11 +233,20 @@ void PrintStatusBar(Editor* editor, u16 cursorX, u16 cursorY)
     MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
     EnqueueCommandQueue(&editor->Commands, command);
 
-    u16 targetX = editor->Width - (u16)(Log10(cursorX) + Log10(cursorY) + 4);
+    u16 targetX = editor->Width - (u16)(Log10(cursorX) + Log10(cursorY) + 10);
     MakeMoveCursorCommand(&command, targetX, editor->Height);
     EnqueueCommandQueue(&editor->Commands, command);
 
     editor->Status.Length = 0;
+    switch (editor->Mode)
+    {
+        case EDITOR_MODE_VIEW:
+            AppendStringView(&editor->Status, AsStringView("- VIEW - "));
+            break;
+        case EDITOR_MODE_EDIT:
+            AppendStringView(&editor->Status, AsStringView("- EDIT - "));
+            break;
+    }
     AppendUInt(&editor->Status, cursorY);
     AppendStringView(&editor->Status, AsStringView(":"));
     AppendUInt(&editor->Status, cursorX);
@@ -385,7 +402,15 @@ void ProcessEvent(Editor* editor, Event* event)
                     {
                         editor->Running = false;
                     }
-                    else
+                    else if (event->Key.Value == 'W' && event->Key.Modifiers == KEY_MODIFIER_CONTROL)
+                    {
+                        editor->Mode = EDITOR_MODE_VIEW;
+                    }
+                    else if (event->Key.Value == 'E' && event->Key.Modifiers == KEY_MODIFIER_CONTROL)
+                    {
+                        editor->Mode = EDITOR_MODE_EDIT;
+                    }
+                    else if (editor->Mode == EDITOR_MODE_EDIT)
                     {
                         editor->Status.Length = 0;
                         AppendStringView(&editor->Status, AsStringView("Insert mode is not supported yet."));
