@@ -179,35 +179,35 @@ void PrintLines(Editor* editor, u16 offsetX, u16 offsetY)
     }
 }
 
-void PrintStatusBar(Editor* editor, u16 cursorX, u16 cursorY)
+void PrintError(Editor* editor)
 {
     Command command;
 
-    if (editor->ErrorTimeout > 0)
-    {
-        editor->ErrorTimeout -= 1;
-        MakeMoveCursorCommand(&command, 1, editor->Height);
-        EnqueueCommandQueue(&editor->Commands, command);
+    MakeMoveCursorCommand(&command, 1, editor->Height);
+    EnqueueCommandQueue(&editor->Commands, command);
 
-        MakeSetForegroundCommand(&command, COLOR_WHITE);
-        EnqueueCommandQueue(&editor->Commands, command);
+    MakeSetForegroundCommand(&command, COLOR_WHITE);
+    EnqueueCommandQueue(&editor->Commands, command);
 
-        MakeSetBackgroundCommand(&command, COLOR_RED);
-        EnqueueCommandQueue(&editor->Commands, command);
+    MakeSetBackgroundCommand(&command, COLOR_RED);
+    EnqueueCommandQueue(&editor->Commands, command);
 
-        MakePrintCommand(&command, MakeStringView(&editor->Status, 0, editor->Status.Length));
-        EnqueueCommandQueue(&editor->Commands, command);
+    MakePrintCommand(&command, MakeStringView(&editor->Status, 0, editor->Status.Length));
+    EnqueueCommandQueue(&editor->Commands, command);
 
-        MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
-        EnqueueCommandQueue(&editor->Commands, command);
+    MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
+    EnqueueCommandQueue(&editor->Commands, command);
 
-        MakeSetForegroundCommand(&command, COLOR_RESET);
-        EnqueueCommandQueue(&editor->Commands, command);
+    MakeSetForegroundCommand(&command, COLOR_RESET);
+    EnqueueCommandQueue(&editor->Commands, command);
 
-        MakeSetBackgroundCommand(&command, COLOR_RESET);
-        EnqueueCommandQueue(&editor->Commands, command);
-        return;
-    }
+    MakeSetBackgroundCommand(&command, COLOR_RESET);
+    EnqueueCommandQueue(&editor->Commands, command);
+}
+
+void PrintStatusBar(Editor* editor, u16 cursorX, u16 cursorY)
+{
+    Command command;
 
     MakeMoveCursorCommand(&command, 1, editor->Height);
     EnqueueCommandQueue(&editor->Commands, command);
@@ -260,7 +260,16 @@ void RefreshScreen(Editor* editor)
     u16 cursorY = editor->CursorY;
 
     PrintLines(editor, offsetX, offsetY);
-    PrintStatusBar(editor, offsetX + cursorX, offsetY + cursorY);
+
+    if (editor->ErrorTimeout > 0)
+    {
+        PrintError(editor);
+        editor->ErrorTimeout -= 1;
+    }
+    else
+    {
+        PrintStatusBar(editor, offsetX + cursorX, offsetY + cursorY);
+    }
 
     MakeMoveCursorCommand(&command, cursorX, cursorY);
     EnqueueCommandQueue(&editor->Commands, command);
