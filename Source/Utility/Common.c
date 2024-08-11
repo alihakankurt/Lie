@@ -44,20 +44,47 @@ void MemorySet(void* destination, u8 value, usize size)
 
 void MemoryCopy(void* destination, const void* source, usize size)
 {
-    while (size >= 8)
-    {
-        *(u64*)destination = *(u64*)source;
-        destination = (u64*)destination + 1;
-        source = (u64*)source + 1;
-        size -= 8;
-    }
+    if (destination == source || size == 0)
+        return;
 
-    while (size >= 1)
+    if (destination < source)
     {
-        *(u8*)destination = *(u8*)source;
-        destination = (u8*)destination + 1;
-        source = (u8*)source + 1;
-        size -= 1;
+        while (size >= 8)
+        {
+            *(u64*)destination = *(u64*)source;
+            destination = (u64*)destination + 1;
+            source = (u64*)source + 1;
+            size -= 8;
+        }
+
+        while (size >= 1)
+        {
+            *(u8*)destination = *(u8*)source;
+            destination = (u8*)destination + 1;
+            source = (u8*)source + 1;
+            size -= 1;
+        }
+    }
+    else
+    {
+        destination = (u8*)destination + size;
+        source = (u8*)source + size;
+
+        while (size >= 8)
+        {
+            destination = (u64*)destination - 1;
+            source = (u64*)source - 1;
+            *(u64*)destination = *(u64*)source;
+            size -= 8;
+        }
+
+        while (size >= 1)
+        {
+            destination = (u8*)destination - 1;
+            source = (u8*)source - 1;
+            *(u8*)destination = *(u8*)source;
+            size -= 1;
+        }
     }
 }
 
@@ -96,6 +123,16 @@ void ExtendString(String* string, usize capacity)
 
     string->Content = content;
     string->Capacity = capacity;
+}
+
+void EraseString(String* string, usize start, usize end)
+{
+    if (start >= end)
+        return;
+
+    MemoryCopy(string->Content + start, string->Content + end, string->Length - end);
+    string->Length -= end - start;
+    string->Content[string->Length] = '\0';
 }
 
 void AppendChar(String* string, char c)

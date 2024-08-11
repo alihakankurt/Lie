@@ -420,17 +420,18 @@ void ProcessEvent(Editor* editor, Event* event)
                 case KEY_CODE_ENTER:
                     if (editor->Mode == EDITOR_MODE_EDIT)
                     {
-                        usize index = editor->CursorY + editor->OffsetY - 1;
-                        String* current = &editor->Rows.Values[index];
                         InsertToRows(&editor->Rows, EmptyString, editor->CursorY + editor->OffsetY);
 
+                        usize index = editor->CursorY + editor->OffsetY - 1;
+                        String* current = &editor->Rows.Values[index];
+
                         u16 positionX = editor->CursorX + editor->OffsetX;
-                        if (positionX <= current->Length)
+                        StringView remaining = MakeStringView(current, positionX - 1, current->Length);
+                        if (remaining.Length > 0)
                         {
                             String* next = &editor->Rows.Values[index + 1];
-                            StringView remaining = MakeStringView(current, positionX - 1, current->Length);
                             AppendStringView(next, remaining);
-                            current->Length -= remaining.Length;
+                            EraseString(current, positionX - 1, current->Length);
                         }
 
                         MoveCursorToLineStart(editor);
@@ -462,6 +463,35 @@ void ProcessEvent(Editor* editor, Event* event)
 
                 case KEY_CODE_PAGE_DOWN:
                     MoveDown(editor, editor->Height);
+                    break;
+
+                case KEY_CODE_BACKSPACE:
+                    if (editor->Mode == EDITOR_MODE_EDIT)
+                    {
+                        usize index = editor->CursorY + editor->OffsetY - 1;
+                        String* current = &editor->Rows.Values[index];
+
+                        u16 positionX = editor->CursorX + editor->OffsetX;
+                        if (positionX == 1 && index > 0)
+                        {
+                            MoveUp(editor, 1);
+                            MoveCursorToLineEnd(editor);
+
+                            String* previous = &editor->Rows.Values[index - 1];
+                            StringView remaining = MakeStringView(current, positionX - 1, current->Length);
+                            if (remaining.Length > 0)
+                            {
+                                AppendStringView(previous, remaining);
+                            }
+
+                            RemoveFromRows(&editor->Rows, index);
+                        }
+                        else if (positionX > 1)
+                        {
+                            MoveLeft(editor, 1);
+                            EraseString(current, positionX - 2, positionX - 1);
+                        }
+                    }
                     break;
 
                 default:

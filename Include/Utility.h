@@ -37,6 +37,7 @@ usize GetStrLength(const char* str);
 void InitializeString(String* string);
 void FinalizeString(String* string);
 void ExtendString(String* string, usize capacity);
+void EraseString(String* string, usize start, usize end);
 
 void AppendChar(String* string, char c);
 void AppendStr(String* string, const char* str);
