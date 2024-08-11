@@ -154,6 +154,23 @@ void AppendUInt(String* string, u64 value)
     AppendStringView(string, view);
 }
 
+void InsertChar(String* string, usize index, char c)
+{
+    if (index > string->Length)
+    {
+        AppendChar(string, c);
+        return;
+    }
+
+    ExtendString(string, string->Length + 1);
+
+    MemoryCopy(string->Content + index + 1, string->Content + index, string->Length - index);
+    string->Content[index] = (u8)c;
+    string->Length += 1;
+
+    string->Content[string->Length] = '\0';
+}
+
 StringView MakeStringView(String* string, usize start, usize end)
 {
     StringView view;

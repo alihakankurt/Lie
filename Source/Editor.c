@@ -412,9 +412,29 @@ void ProcessEvent(Editor* editor, Event* event)
                     }
                     else if (editor->Mode == EDITOR_MODE_EDIT)
                     {
-                        editor->Status.Length = 0;
-                        AppendStringView(&editor->Status, AsStringView("Insert mode is not supported yet."));
-                        editor->ErrorTimeout = 10;
+                        InsertChar(&editor->Rows.Values[editor->CursorY + editor->OffsetY - 1], editor->CursorX + editor->OffsetX - 1, (char)event->Key.Value);
+                        MoveRight(editor, 1);
+                    }
+                    break;
+
+                case KEY_CODE_ENTER:
+                    if (editor->Mode == EDITOR_MODE_EDIT)
+                    {
+                        usize index = editor->CursorY + editor->OffsetY - 1;
+                        String* current = &editor->Rows.Values[index];
+                        InsertToRows(&editor->Rows, EmptyString, editor->CursorY + editor->OffsetY);
+
+                        u16 positionX = editor->CursorX + editor->OffsetX;
+                        if (positionX <= current->Length)
+                        {
+                            String* next = &editor->Rows.Values[index + 1];
+                            StringView remaining = MakeStringView(current, positionX - 1, current->Length);
+                            AppendStringView(next, remaining);
+                            current->Length -= remaining.Length;
+                        }
+
+                        MoveCursorToLineStart(editor);
+                        MoveDown(editor, 1);
                     }
                     break;
 
