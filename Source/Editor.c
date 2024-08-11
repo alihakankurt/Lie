@@ -16,6 +16,7 @@ typedef struct Editor
 {
     Terminal* Terminal;
     CommandQueue Commands;
+    StringView Filepath;
 
     u16 Width;
     u16 Height;
@@ -75,6 +76,7 @@ bool RunEditorWithNoFile()
     Editor editor;
     InitializeEditor(&editor);
     AddToRows(&editor.Rows, EmptyString);
+    editor.Filepath = AsStringView("Untitled.txt");
     bool status = RunEditor(&editor);
     FinalizeEditor(&editor);
     return status;
@@ -84,6 +86,7 @@ bool RunEditorWithFile(StringView filepath)
 {
     Editor editor;
     InitializeEditor(&editor);
+    editor.Filepath = filepath;
     bool status = CreateRowsFromFile(filepath, &editor.Rows) && RunEditor(&editor);
     FinalizeEditor(&editor);
     return status;
@@ -99,9 +102,9 @@ bool CreateRowsFromFile(StringView filepath, Rows* rows)
         return false;
     }
 
-    for (usize start = 0, end = 0; end < content.Length; end += 1)
+    for (usize start = 0, end = 0; end <= content.Length; end += 1)
     {
-        if (content.Content[end] == '\n' || content.Content[end] == '\0')
+        if (content.Content[end] == '\n' || end == content.Length)
         {
             String line = EmptyString;
             StringView view = MakeStringView(&content, start, end);
@@ -120,6 +123,27 @@ bool CreateRowsFromFile(StringView filepath, Rows* rows)
 
     FinalizeString(&content);
     return true;
+}
+
+void EditorSaveFile(Editor* editor)
+{
+    String content = EmptyString;
+    for (usize index = 0; index < editor->Rows.Count; index += 1)
+    {
+        AppendString(&content, &editor->Rows.Values[index]);
+        if (index < editor->Rows.Count - 1)
+        {
+            AppendChar(&content, '\n');
+        }
+    }
+
+    if (!WriteFile(editor->Filepath, MakeStringView(&content, 0, content.Length)))
+    {
+        static const StringView fileError = AsStringView("Failed to write the file.\n");
+        WriteStdOut(fileError.Content, fileError.Length);
+    }
+
+    FinalizeString(&content);
 }
 
 bool RunEditor(Editor* editor)
@@ -409,6 +433,10 @@ void ProcessEvent(Editor* editor, Event* event)
                     else if (event->Key.Value == 'E' && event->Key.Modifiers == KEY_MODIFIER_CONTROL)
                     {
                         editor->Mode = EDITOR_MODE_EDIT;
+                    }
+                    else if (event->Key.Value == 'S' && event->Key.Modifiers == KEY_MODIFIER_CONTROL)
+                    {
+                        EditorSaveFile(editor);
                     }
                     else if (editor->Mode == EDITOR_MODE_EDIT)
                     {
