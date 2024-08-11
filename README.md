@@ -9,7 +9,8 @@ It is currently in early stages of development and is not yet ready for use.
 
 - Text viewing with scroll support
 - Status bar with error messages
-- TBA
+- View and edit mode
+- Save and load files
 
 ## Building
 
