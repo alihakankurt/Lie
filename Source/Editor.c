@@ -441,6 +441,62 @@ void MoveRight(Editor* editor, u16 count)
     }
 }
 
+void InsertCharacter(Editor* editor, char character)
+{
+    usize rowIndex = editor->FixedCursorY - 1 + editor->OffsetY;
+    String* currentRow = &editor->Rows.Values[rowIndex];
+    usize insertIndex = editor->FixedCursorX + editor->OffsetX - 1;
+    InsertChar(currentRow, insertIndex, character);
+    MoveRight(editor, 1);
+}
+
+void InsertNewLine(Editor* editor)
+{
+    InsertToRows(&editor->Rows, EmptyString, editor->CursorY + editor->OffsetY);
+
+    usize rowIndex = editor->FixedCursorY - 1 + editor->OffsetY;
+    String* currentRow = &editor->Rows.Values[rowIndex];
+
+    u16 insertIndex = editor->FixedCursorX - 1 + editor->OffsetX;
+    StringView contentToEnd = MakeStringView(currentRow, insertIndex, currentRow->Length);
+    if (contentToEnd.Length > 0)
+    {
+        String* nextRow = &editor->Rows.Values[rowIndex + 1];
+        AppendStringView(nextRow, contentToEnd);
+        EraseString(currentRow, insertIndex, currentRow->Length);
+    }
+
+    MoveCursorToLineStart(editor);
+    MoveDown(editor, 1);
+}
+
+void DeleteCharacter(Editor* editor)
+{
+    usize rowIndex = editor->FixedCursorY - 1 + editor->OffsetY;
+    String* currentRow = &editor->Rows.Values[rowIndex];
+
+    u16 deleteIndex = editor->FixedCursorX - 1 + editor->OffsetX;
+    if (deleteIndex > 0)
+    {
+        MoveLeft(editor, 1);
+        EraseString(currentRow, deleteIndex - 1, deleteIndex);
+    }
+    else if (rowIndex > 0)
+    {
+        MoveUp(editor, 1);
+        MoveCursorToLineEnd(editor);
+
+        String* previousRow = &editor->Rows.Values[rowIndex - 1];
+        StringView contentToEnd = MakeStringView(currentRow, deleteIndex, currentRow->Length);
+        if (contentToEnd.Length > 0)
+        {
+            AppendStringView(previousRow, contentToEnd);
+        }
+
+        RemoveFromRows(&editor->Rows, rowIndex);
+    }
+}
+
 void ProcessEvent(Editor* editor, Event* event)
 {
     switch (event->Kind)
@@ -470,32 +526,14 @@ void ProcessEvent(Editor* editor, Event* event)
                     }
                     else if (editor->Mode == EDITOR_MODE_EDIT)
                     {
-                        String* currentRow = &editor->Rows.Values[editor->FixedCursorY + editor->OffsetY - 1];
-                        usize insertIndex = editor->FixedCursorX + editor->OffsetX - 1;
-                        InsertChar(currentRow, insertIndex, (char)event->Key.Value);
-                        MoveRight(editor, 1);
+                        InsertCharacter(editor, (char)event->Key.Value);
                     }
                     break;
 
                 case KEY_CODE_ENTER:
                     if (editor->Mode == EDITOR_MODE_EDIT)
                     {
-                        InsertToRows(&editor->Rows, EmptyString, editor->CursorY + editor->OffsetY);
-
-                        usize rowIndex = editor->FixedCursorY - 1 + editor->OffsetY;
-                        String* currentRow = &editor->Rows.Values[rowIndex];
-
-                        u16 insertIndex = editor->FixedCursorX - 1 + editor->OffsetX;
-                        StringView contentToEnd = MakeStringView(currentRow, insertIndex, currentRow->Length);
-                        if (contentToEnd.Length > 0)
-                        {
-                            String* nextRow = &editor->Rows.Values[rowIndex + 1];
-                            AppendStringView(nextRow, contentToEnd);
-                            EraseString(currentRow, insertIndex, currentRow->Length);
-                        }
-
-                        MoveCursorToLineStart(editor);
-                        MoveDown(editor, 1);
+                        InsertNewLine(editor);
                     }
                     break;
 
@@ -528,29 +566,7 @@ void ProcessEvent(Editor* editor, Event* event)
                 case KEY_CODE_BACKSPACE:
                     if (editor->Mode == EDITOR_MODE_EDIT)
                     {
-                        usize rowIndex = editor->FixedCursorY - 1 + editor->OffsetY;
-                        String* currentRow = &editor->Rows.Values[rowIndex];
-
-                        u16 deleteIndex = editor->FixedCursorX - 1 + editor->OffsetX;
-                        if (deleteIndex > 0)
-                        {
-                            MoveLeft(editor, 1);
-                            EraseString(currentRow, deleteIndex - 1, deleteIndex);
-                        }
-                        else if (rowIndex > 0)
-                        {
-                            MoveUp(editor, 1);
-                            MoveCursorToLineEnd(editor);
-
-                            String* previousRow = &editor->Rows.Values[rowIndex - 1];
-                            StringView contentToEnd = MakeStringView(currentRow, deleteIndex, currentRow->Length);
-                            if (contentToEnd.Length > 0)
-                            {
-                                AppendStringView(previousRow, contentToEnd);
-                            }
-
-                            RemoveFromRows(&editor->Rows, rowIndex);
-                        }
+                        DeleteCharacter(editor);
                     }
                     break;
 
