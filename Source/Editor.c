@@ -31,7 +31,8 @@ typedef struct Editor
     EditorMode Mode;
 
     String Status;
-    u16 ErrorTimeout;
+    u16 StatusTimeout;
+    bool IsErrorStatus;
 } Editor;
 
 void InitializeEditor(Editor* editor)
@@ -50,7 +51,8 @@ void InitializeEditor(Editor* editor)
     editor->Mode = EDITOR_MODE_VIEW;
 
     InitializeString(&editor->Status);
-    editor->ErrorTimeout = 0;
+    editor->StatusTimeout = 0;
+    editor->IsErrorStatus = false;
 }
 
 void FinalizeEditor(Editor* editor)
@@ -66,10 +68,19 @@ void FinalizeEditor(Editor* editor)
     FinalizeCommandQueue(&editor->Commands);
 }
 
+void PrepareStatusMessage(Editor* editor, StringView message, bool isError)
+{
+    editor->Status.Length = 0;
+    AppendStringView(&editor->Status, message);
+    editor->StatusTimeout = 10;
+    editor->IsErrorStatus = isError;
+}
+
+void SaveFile(Editor* editor);
+bool CreateRowsFromFile(StringView filepath, Rows* rows);
 bool RunEditor(Editor* editor);
 void RefreshScreen(Editor* editor);
 void ProcessEvent(Editor* editor, Event* event);
-bool CreateRowsFromFile(StringView filepath, Rows* rows);
 
 bool RunEditorWithNoFile()
 {
@@ -90,6 +101,32 @@ bool RunEditorWithFile(StringView filepath)
     bool status = CreateRowsFromFile(filepath, &editor.Rows) && RunEditor(&editor);
     FinalizeEditor(&editor);
     return status;
+}
+
+void SaveFile(Editor* editor)
+{
+    String content = EmptyString;
+    for (usize index = 0; index < editor->Rows.Count; index += 1)
+    {
+        AppendString(&content, &editor->Rows.Values[index]);
+        if (index < editor->Rows.Count - 1)
+        {
+            AppendChar(&content, '\n');
+        }
+    }
+
+    if (WriteFile(editor->Filepath, MakeStringView(&content, 0, content.Length)))
+    {
+        static const StringView fileSaved = AsStringView("The content saved to the file.");
+        PrepareStatusMessage(editor, fileSaved, false);
+    }
+    else
+    {
+        static const StringView fileError = AsStringView("Failed to write the file.");
+        PrepareStatusMessage(editor, fileError, true);
+    }
+
+    FinalizeString(&content);
 }
 
 bool CreateRowsFromFile(StringView filepath, Rows* rows)
@@ -123,27 +160,6 @@ bool CreateRowsFromFile(StringView filepath, Rows* rows)
 
     FinalizeString(&content);
     return true;
-}
-
-void EditorSaveFile(Editor* editor)
-{
-    String content = EmptyString;
-    for (usize index = 0; index < editor->Rows.Count; index += 1)
-    {
-        AppendString(&content, &editor->Rows.Values[index]);
-        if (index < editor->Rows.Count - 1)
-        {
-            AppendChar(&content, '\n');
-        }
-    }
-
-    if (!WriteFile(editor->Filepath, MakeStringView(&content, 0, content.Length)))
-    {
-        static const StringView fileError = AsStringView("Failed to write the file.\n");
-        WriteStdOut(fileError.Content, fileError.Length);
-    }
-
-    FinalizeString(&content);
 }
 
 bool RunEditor(Editor* editor)
@@ -211,7 +227,7 @@ void PrintLines(Editor* editor, u16 offsetX, u16 offsetY)
     }
 }
 
-void PrintError(Editor* editor)
+void PrintStatusMessage(Editor* editor)
 {
     Command command;
 
@@ -221,7 +237,7 @@ void PrintError(Editor* editor)
     MakeSetForegroundCommand(&command, COLOR_WHITE);
     EnqueueCommandQueue(&editor->Commands, command);
 
-    MakeSetBackgroundCommand(&command, COLOR_RED);
+    MakeSetBackgroundCommand(&command, editor->IsErrorStatus ? COLOR_RED : COLOR_CYAN);
     EnqueueCommandQueue(&editor->Commands, command);
 
     MakePrintCommand(&command, MakeStringView(&editor->Status, 0, editor->Status.Length));
@@ -237,7 +253,7 @@ void PrintError(Editor* editor)
     EnqueueCommandQueue(&editor->Commands, command);
 }
 
-void PrintStatusBar(Editor* editor, u16 cursorX, u16 cursorY)
+void PrintEditorInfo(Editor* editor, u16 cursorX, u16 cursorY)
 {
     Command command;
 
@@ -302,14 +318,14 @@ void RefreshScreen(Editor* editor)
 
     PrintLines(editor, offsetX, offsetY);
 
-    if (editor->ErrorTimeout > 0)
+    if (editor->StatusTimeout > 0)
     {
-        PrintError(editor);
-        editor->ErrorTimeout -= 1;
+        PrintStatusMessage(editor);
+        editor->StatusTimeout -= 1;
     }
     else
     {
-        PrintStatusBar(editor, offsetX + cursorX, offsetY + cursorY);
+        PrintEditorInfo(editor, offsetX + cursorX, offsetY + cursorY);
     }
 
     MakeMoveCursorCommand(&command, cursorX, cursorY);
@@ -436,7 +452,7 @@ void ProcessEvent(Editor* editor, Event* event)
                     }
                     else if (event->Key.Value == 'S' && event->Key.Modifiers == KEY_MODIFIER_CONTROL)
                     {
-                        EditorSaveFile(editor);
+                        SaveFile(editor);
                     }
                     else if (editor->Mode == EDITOR_MODE_EDIT)
                     {
