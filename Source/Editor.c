@@ -450,6 +450,21 @@ void InsertCharacter(Editor* editor, char character)
     MoveRight(editor, 1);
 }
 
+void InsertTab(Editor* editor)
+{
+    usize rowIndex = editor->FixedCursorY - 1 + editor->OffsetY;
+    String* currentRow = &editor->Rows.Values[rowIndex];
+    usize insertIndex = editor->FixedCursorX + editor->OffsetX - 1;
+
+    u16 tabSize = 4 - (insertIndex % 4);
+    for (u16 index = 0; index < tabSize; index += 1)
+    {
+        InsertChar(currentRow, insertIndex + index, ' ');
+    }
+
+    MoveRight(editor, tabSize);
+}
+
 void InsertNewLine(Editor* editor)
 {
     InsertToRows(&editor->Rows, EmptyString, editor->CursorY + editor->OffsetY);
@@ -527,6 +542,13 @@ void ProcessEvent(Editor* editor, Event* event)
                     else if (editor->Mode == EDITOR_MODE_EDIT)
                     {
                         InsertCharacter(editor, (char)event->Key.Value);
+                    }
+                    break;
+
+                case KEY_CODE_TAB:
+                    if (editor->Mode == EDITOR_MODE_EDIT)
+                    {
+                        InsertTab(editor);
                     }
                     break;
 
