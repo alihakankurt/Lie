@@ -48,6 +48,7 @@ void AppendUInt(String* string, u64 value);
 void InsertChar(String* string, usize index, char c);
 
 #define AsStringView(str) ((StringView){.Length = sizeof(str) - 1, .Content = (u8*)str})
+StringView ToStringView(String* string);
 StringView MakeStringView(String* string, usize start, usize end);
 
 bool TryParseUInt(StringView view, u64* value);

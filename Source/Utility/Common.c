@@ -208,12 +208,14 @@ void InsertChar(String* string, usize index, char c)
     string->Content[string->Length] = '\0';
 }
 
+StringView ToStringView(String* string)
+{
+    return (StringView){.Length = string->Length, .Content = string->Content};
+}
+
 StringView MakeStringView(String* string, usize start, usize end)
 {
-    StringView view;
-    view.Length = end - start;
-    view.Content = string->Content + start;
-    return view;
+    return (StringView){.Length = end - start, .Content = string->Content + start};
 }
 
 bool TryParseUInt(StringView view, u64* value)

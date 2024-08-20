@@ -153,7 +153,7 @@ void SaveFile(Editor* editor)
         }
     }
 
-    if (WriteFile(MakeStringView(&editor->Filepath, 0, editor->Filepath.Length), MakeStringView(&content, 0, content.Length)))
+    if (WriteFile(ToStringView(&editor->Filepath), ToStringView(&content)))
     {
         static const StringView fileSaved = AsStringView("The content saved to the file.");
         PrepareStatusMessage(editor, fileSaved, false);
@@ -170,7 +170,7 @@ void SaveFile(Editor* editor)
 bool CreateRowsFromFile(Editor* editor)
 {
     String content = EmptyString;
-    if (!ReadFile(MakeStringView(&editor->Filepath, 0, editor->Filepath.Length), &content))
+    if (!ReadFile(ToStringView(&editor->Filepath), &content))
     {
         static const StringView fileError = AsStringView("Failed to read the file.\n");
         WriteStdOut(fileError.Content, fileError.Length);
@@ -292,7 +292,7 @@ void PrintStatusMessage(Editor* editor)
     MakeSetBackgroundCommand(&command, editor->IsErrorStatus ? COLOR_RED : COLOR_CYAN);
     EnqueueCommandQueue(&editor->Commands, command);
 
-    MakePrintCommand(&command, MakeStringView(&editor->Status, 0, editor->Status.Length));
+    MakePrintCommand(&command, ToStringView(&editor->Status));
     EnqueueCommandQueue(&editor->Commands, command);
 
     MakeClearLineCommand(&command, CLEAR_LINE_TO_END);
@@ -344,7 +344,7 @@ void PrintEditorInfo(Editor* editor)
     AppendUInt(&editor->Status, positionY);
     AppendStringView(&editor->Status, AsStringView(":"));
     AppendUInt(&editor->Status, positionX);
-    MakePrintCommand(&command, MakeStringView(&editor->Status, 0, editor->Status.Length));
+    MakePrintCommand(&command, ToStringView(&editor->Status));
     EnqueueCommandQueue(&editor->Commands, command);
 
     MakeSetForegroundCommand(&command, COLOR_RESET);
@@ -632,7 +632,7 @@ bool EditorPrompt(Editor* editor, String* prompt, StringView* out)
     Event event;
     while (true)
     {
-        PrepareStatusMessage(editor, MakeStringView(prompt, 0, prompt->Length), false);
+        PrepareStatusMessage(editor, ToStringView(prompt), false);
         RefreshScreen(editor);
 
         if (ReadEvent(editor->Terminal, &event))
