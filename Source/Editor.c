@@ -123,7 +123,7 @@ void SaveFile(Editor* editor)
     {
         String prompt = EmptyString;
         AppendStringView(&prompt, AsStringView("Save as: "));
-        StringView out = {0};
+        StringView out = EmptyStringView;
         if (!EditorPrompt(editor, &prompt, &out))
         {
             FinalizeString(&prompt);

@@ -31,6 +31,7 @@ typedef struct StringView
 } StringView;
 
 #define EmptyString ((String){.Length = 0, .Capacity = 0, .Content = NULL})
+#define EmptyStringView ((StringView){.Length = 0, .Content = NULL})
 
 usize GetStrLength(const char* str);
 
