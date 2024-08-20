@@ -18,7 +18,7 @@ typedef struct Editor
     CommandQueue Commands;
 
     Rows Rows;
-    StringView Filepath;
+    String Filepath;
 
     bool Running;
     EditorMode Mode;
@@ -46,6 +46,7 @@ void InitializeEditor(Editor* editor)
     InitializeCommandQueue(&editor->Commands);
 
     InitializeRows(&editor->Rows);
+    editor->Filepath = EmptyString;
 
     editor->Running = true;
     editor->Mode = EDITOR_MODE_VIEW;
@@ -70,6 +71,7 @@ void FinalizeEditor(Editor* editor)
 {
     FinalizeString(&editor->Status);
 
+    FinalizeString(&editor->Filepath);
     for (usize index = 0; index < editor->Rows.Count; index += 1)
         FinalizeString(&editor->Rows.Values[index]);
 
@@ -88,35 +90,59 @@ void PrepareStatusMessage(Editor* editor, StringView message, bool isError)
 }
 
 void SaveFile(Editor* editor);
-bool CreateRowsFromFile(StringView filepath, Rows* rows);
+bool CreateRowsFromFile(Editor* editor);
 bool RunEditor(Editor* editor);
 void FixCursorPosition(Editor* editor);
 void RefreshScreen(Editor* editor);
 void ProcessEvent(Editor* editor, Event* event);
+bool EditorPrompt(Editor* editor, String* prompt, StringView* out);
 
 bool RunEditorWithNoFile()
 {
     Editor editor;
     InitializeEditor(&editor);
     AddToRows(&editor.Rows, EmptyString);
-    editor.Filepath = AsStringView("Untitled.txt");
     bool status = RunEditor(&editor);
     FinalizeEditor(&editor);
     return status;
 }
 
-bool RunEditorWithFile(StringView filepath)
+bool RunEditorWithFile(String filepath)
 {
     Editor editor;
     InitializeEditor(&editor);
     editor.Filepath = filepath;
-    bool status = CreateRowsFromFile(filepath, &editor.Rows) && RunEditor(&editor);
+    bool status = CreateRowsFromFile(&editor) && RunEditor(&editor);
     FinalizeEditor(&editor);
     return status;
 }
 
 void SaveFile(Editor* editor)
 {
+    if (editor->Filepath.Length == 0)
+    {
+        String prompt = EmptyString;
+        AppendStringView(&prompt, AsStringView("Save as: "));
+        StringView out = {0};
+        if (!EditorPrompt(editor, &prompt, &out))
+        {
+            FinalizeString(&prompt);
+            return;
+        }
+
+        if (out.Length == 0)
+        {
+            static const StringView fileError = AsStringView("Invalid file name.");
+            PrepareStatusMessage(editor, fileError, true);
+            FinalizeString(&prompt);
+            return;
+        }
+
+        editor->Filepath.Length = 0;
+        AppendStringView(&editor->Filepath, out);
+        FinalizeString(&prompt);
+    }
+
     String content = EmptyString;
     for (usize index = 0; index < editor->Rows.Count; index += 1)
     {
@@ -127,7 +153,7 @@ void SaveFile(Editor* editor)
         }
     }
 
-    if (WriteFile(editor->Filepath, MakeStringView(&content, 0, content.Length)))
+    if (WriteFile(MakeStringView(&editor->Filepath, 0, editor->Filepath.Length), MakeStringView(&content, 0, content.Length)))
     {
         static const StringView fileSaved = AsStringView("The content saved to the file.");
         PrepareStatusMessage(editor, fileSaved, false);
@@ -141,10 +167,10 @@ void SaveFile(Editor* editor)
     FinalizeString(&content);
 }
 
-bool CreateRowsFromFile(StringView filepath, Rows* rows)
+bool CreateRowsFromFile(Editor* editor)
 {
     String content = EmptyString;
-    if (!ReadFile(filepath, &content))
+    if (!ReadFile(MakeStringView(&editor->Filepath, 0, editor->Filepath.Length), &content))
     {
         static const StringView fileError = AsStringView("Failed to read the file.\n");
         WriteStdOut(fileError.Content, fileError.Length);
@@ -165,7 +191,7 @@ bool CreateRowsFromFile(StringView filepath, Rows* rows)
                 AppendStringView(&line, view);
             }
 
-            AddToRows(rows, line);
+            AddToRows(&editor->Rows, line);
             start = end + 1;
         }
     }
@@ -596,5 +622,47 @@ void ProcessEvent(Editor* editor, Event* event)
                     break;
             }
             break;
+    }
+}
+
+bool EditorPrompt(Editor* editor, String* prompt, StringView* out)
+{
+    usize initialLength = prompt->Length;
+
+    Event event;
+    while (true)
+    {
+        PrepareStatusMessage(editor, MakeStringView(prompt, 0, prompt->Length), false);
+        RefreshScreen(editor);
+
+        if (ReadEvent(editor->Terminal, &event))
+        {
+            if (event.Kind != EVENT_KEY)
+                continue;
+
+            if (event.Key.Code == KEY_CODE_ENTER)
+            {
+                editor->StatusTimeout = 0;
+                *out = MakeStringView(prompt, initialLength, prompt->Length);
+                return true;
+            }
+
+            if (event.Key.Code == KEY_CODE_ESCAPE)
+            {
+                editor->StatusTimeout = 0;
+                return false;
+            }
+
+            if (event.Key.Code == KEY_CODE_BACKSPACE && prompt->Length > initialLength)
+            {
+                prompt->Length -= 1;
+                continue;
+            }
+
+            if (event.Key.Code == KEY_CODE_CHARACTER)
+            {
+                AppendChar(prompt, (char)event.Key.Value);
+            }
+        }
     }
 }

@@ -4,6 +4,6 @@
 #include <Utility.h>
 
 bool RunEditorWithNoFile();
-bool RunEditorWithFile(StringView filepath);
+bool RunEditorWithFile(String filepath);
 
 #endif
