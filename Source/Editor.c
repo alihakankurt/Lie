@@ -146,7 +146,12 @@ void SaveFile(Editor* editor)
     String content = EmptyString;
     for (usize index = 0; index < editor->Rows.Count; index += 1)
     {
-        AppendString(&content, &editor->Rows.Values[index]);
+        String* current = &editor->Rows.Values[index];
+        if (current->Length > 0)
+        {
+            AppendString(&content, &editor->Rows.Values[index]);
+        }
+
         if (index < editor->Rows.Count - 1)
         {
             AppendChar(&content, '\n');
