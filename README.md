@@ -1,16 +1,15 @@
 
 # Lie
 
-Lie is a simple, lightweight, and easy-to-use terminal-based text editor written in C.
-
-It is currently in early stages of development and is not yet ready for use.
+Lie is a simple, lightweight, and easy-to-use terminal-based text editor written in C. It is designed to be a minimalistic text editor with basic features with a good design.
 
 ## Features
 
 - Text viewing with scroll support
-- Status bar with error messages
+- Status bar with information and error messages
 - View and edit mode
 - Save and load files
+- Prompt requests
 
 ## Building
 
@@ -44,6 +43,11 @@ It is currently in early stages of development and is not yet ready for use.
 5. Run the executable
 ```console
 > ./Bin/Lie [filename]
+```
+
+**You can also install the executable to your system by running the following command:**
+```console
+> cmake --install Build
 ```
 
 ## License
