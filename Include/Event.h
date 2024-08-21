@@ -47,11 +47,11 @@ typedef struct Event
         {
             KeyCode Code;
             KeyModifier Modifiers;
-            u16 Value;
+            char Value;
         } Key;
     };
 } Event;
 
-void MakeKeyEvent(Event* event, KeyCode code, KeyModifier modifiers, u16 value);
+void MakeKeyEvent(Event* event, KeyCode code, KeyModifier modifiers, char value);
 
 #endif

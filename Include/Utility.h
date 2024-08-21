@@ -6,10 +6,6 @@
 #define Min(left, right) ((left) < (right) ? (left) : (right))
 #define Max(left, right) ((left) > (right) ? (left) : (right))
 
-bool IsDigit(u8 c);
-bool IsUppercase(u8 c);
-bool IsLowercase(u8 c);
-
 void* MemoryAllocate(usize size);
 void MemoryFree(void* source);
 
@@ -17,22 +13,26 @@ void MemoryClear(void* destination, usize size);
 void MemorySet(void* destination, u8 value, usize size);
 void MemoryCopy(void* destination, const void* source, usize size);
 
+
 typedef struct String
 {
     usize Length;
     usize Capacity;
-    u8* Content;
+    char* Content;
 } String;
 
 typedef struct StringView
 {
     usize Length;
-    const u8* Content;
+    const char* Content;
 } StringView;
 
-#define EmptyString ((String){.Length = 0, .Capacity = 0, .Content = NULL})
+#define EmptyString     ((String){.Length = 0, .Capacity = 0, .Content = NULL})
 #define EmptyStringView ((StringView){.Length = 0, .Content = NULL})
 
+bool IsDigit(char c);
+bool IsUppercase(char c);
+bool IsLowercase(char c);
 usize GetStrLength(const char* str);
 
 void InitializeString(String* string);
@@ -48,7 +48,7 @@ void AppendUInt(String* string, u64 value);
 
 void InsertChar(String* string, usize index, char c);
 
-#define AsStringView(str) ((StringView){.Length = sizeof(str) - 1, .Content = (u8*)str})
+#define AsStringView(str) ((StringView){.Length = sizeof(str) - 1, .Content = str})
 StringView ToStringView(String* string);
 StringView MakeStringView(String* string, usize start, usize end);
 

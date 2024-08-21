@@ -22,7 +22,7 @@ struct Terminal
 {
     struct termios OriginalTermios;
 
-    u8 In[32];
+    char In[32];
     String Out;
 };
 
@@ -262,13 +262,13 @@ bool ReadKeyModifiers(Terminal* terminal, KeyModifier* modifiers, usize index)
     if (!ReadStdIn(&terminal->In[index], 1) || !IsDigit(terminal->In[index]))
         return false;
 
-    u8 value = terminal->In[index] - '0';
+    u8 value = (u8)(terminal->In[index] - '0');
     if (!ReadStdIn(&terminal->In[index], 1))
         return false;
 
     if (IsDigit(terminal->In[index]))
     {
-        value = value * 10 + terminal->In[index] - '0';
+        value = value * 10 + (u8)(terminal->In[index] - '0');
         if (!ReadStdIn(&terminal->In[index], 1))
             return false;
     }
@@ -510,7 +510,7 @@ bool HandleCSICodes(Terminal* terminal, Event* event)
 
         if (IsUppercase(terminal->In[2]))
         {
-            u8 value = (terminal->In[0] - '0') * 10 + terminal->In[1] - '0';
+            u8 value = (u8)((terminal->In[0] - '0') * 10 + terminal->In[1] - '0');
             KeyModifier modifiers = GetKeyModifiers(value);
             return HandleXTermCodes(terminal, event, modifiers);
         }
@@ -520,7 +520,7 @@ bool HandleCSICodes(Terminal* terminal, Event* event)
 
     if (IsUppercase(terminal->In[1]))
     {
-        u8 value = terminal->In[0] - '0';
+        u8 value = (u8)(terminal->In[0] - '0');
         KeyModifier modifiers = GetKeyModifiers(value);
         return HandleXTermCodes(terminal, event, modifiers);
     }

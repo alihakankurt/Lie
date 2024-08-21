@@ -1,6 +1,6 @@
 #include <Event.h>
 
-void MakeKeyEvent(Event* event, KeyCode code, KeyModifier modifiers, u16 value)
+void MakeKeyEvent(Event* event, KeyCode code, KeyModifier modifiers, char value)
 {
     event->Kind = EVENT_KEY;
     event->Key.Code = code;

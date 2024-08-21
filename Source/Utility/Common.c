@@ -1,20 +1,5 @@
 #include <Utility.h>
 
-bool IsDigit(u8 c)
-{
-    return '0' <= c && c <= '9';
-}
-
-bool IsUppercase(u8 c)
-{
-    return 'A' <= c && c <= 'Z';
-}
-
-bool IsLowercase(u8 c)
-{
-    return 'a' <= c && c <= 'z';
-}
-
 void MemoryClear(void* destination, usize size)
 {
     MemorySet(destination, 0, size);
@@ -88,6 +73,21 @@ void MemoryCopy(void* destination, const void* source, usize size)
     }
 }
 
+bool IsDigit(char c)
+{
+    return '0' <= c && c <= '9';
+}
+
+bool IsUppercase(char c)
+{
+    return 'A' <= c && c <= 'Z';
+}
+
+bool IsLowercase(char c)
+{
+    return 'a' <= c && c <= 'z';
+}
+
 usize GetStrLength(const char* str)
 {
     usize length = 0;
@@ -114,7 +114,7 @@ void ExtendString(String* string, usize capacity)
     if (string->Capacity >= capacity)
         return;
 
-    u8* content = MemoryAllocate(capacity + 1);
+    char* content = MemoryAllocate(capacity + 1);
     if (string->Content != NULL)
     {
         MemoryCopy(content, string->Content, string->Length);
@@ -139,7 +139,7 @@ void AppendChar(String* string, char c)
 {
     ExtendString(string, string->Length + 1);
 
-    string->Content[string->Length] = (u8)c;
+    string->Content[string->Length] = c;
     string->Length += 1;
 
     string->Content[string->Length] = '\0';
@@ -178,11 +178,11 @@ void AppendStringView(String* string, StringView view)
 
 void AppendUInt(String* string, u64 value)
 {
-    static u8 buffer[32];
+    static char buffer[32];
     usize index = 31;
     while (value > 0)
     {
-        buffer[index] = (u8)('0' + (value % 10));
+        buffer[index] = '0' + (value % 10);
         value /= 10;
         index -= 1;
     }
@@ -202,7 +202,7 @@ void InsertChar(String* string, usize index, char c)
     ExtendString(string, string->Length + 1);
 
     MemoryCopy(string->Content + index + 1, string->Content + index, string->Length - index);
-    string->Content[index] = (u8)c;
+    string->Content[index] = c;
     string->Length += 1;
 
     string->Content[string->Length] = '\0';
@@ -226,7 +226,7 @@ bool TryParseUInt(StringView view, u64* value)
         if (!IsDigit(view.Content[index]))
             return false;
 
-        *value = *value * 10 + (view.Content[index] - '0');
+        *value = *value * 10 + (u64)(view.Content[index] - '0');
     }
 
     return true;

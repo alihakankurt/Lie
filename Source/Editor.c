@@ -572,7 +572,7 @@ void ProcessEvent(Editor* editor, Event* event)
                     }
                     else if (editor->Mode == EDITOR_MODE_EDIT)
                     {
-                        InsertCharacter(editor, (char)event->Key.Value);
+                        InsertCharacter(editor, event->Key.Value);
                     }
                     break;
 
@@ -666,7 +666,7 @@ bool EditorPrompt(Editor* editor, String* prompt, StringView* out)
 
             if (event.Key.Code == KEY_CODE_CHARACTER)
             {
-                AppendChar(prompt, (char)event.Key.Value);
+                AppendChar(prompt, event.Key.Value);
             }
         }
     }
