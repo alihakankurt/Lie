@@ -100,3 +100,16 @@ set(Sources
 
 add_executable(${PROJECT_NAME} ${Sources})
 target_link_libraries(${PROJECT_NAME} PRIVATE CompileOptions Includes)
+
+## -------------------------- ##
+##        Installation        ##
+## -------------------------- ##
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/Bin
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/Lib
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/Lib
+)
+
+install(DIRECTORY Include/ DESTINATION ${CMAKE_INSTALL_PREFIX}/Include)
+
+install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_PREFIX})
